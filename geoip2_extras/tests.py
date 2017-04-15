@@ -88,14 +88,6 @@ class GeoIP2MiddlewareTests(TestCase):
     def test_init(self, mock_geo2):
         """Test we can switch off the middleware using waffle."""
 
-        # test: switch off should disable middleware
-        with override_settings(GEOIP2_MIDDLEWARE_ENABLED=False):
-            self.assertRaises(
-                MiddlewareNotUsed,
-                GeoIP2Middleware,
-                GeoIP2MiddlewareTests.get_response
-            )
-
         # test: switch ON, should set up geoip
         with override_settings(GEOIP2_MIDDLEWARE_ENABLED=True):
             middleware = GeoIP2Middleware(GeoIP2MiddlewareTests.get_response)

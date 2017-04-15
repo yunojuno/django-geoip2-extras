@@ -26,8 +26,6 @@ class GeoIP2Middleware(object):
 
     def __init__(self, get_response):
         """Check settings to see if middleware is enabled, and try to init GeoIP2."""
-        if not getattr(settings, 'GEOIP2_MIDDLEWARE_ENABLED', False):
-            raise MiddlewareNotUsed("GeoIP disabled via settings.GEOIP2_MIDDLEWARE_ENABLED")
         try:
             self.geoip2 = GeoIP2()
         except GeoIP2Exception:

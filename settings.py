@@ -10,12 +10,6 @@ DATABASES = {
     }
 }
 
-INSTALLED_APPS = (
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-)
-
 SECRET_KEY = "request_token"
 
 GEOIP_PATH = os.path.dirname(__file__)
