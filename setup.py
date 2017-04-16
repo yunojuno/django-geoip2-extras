@@ -13,7 +13,7 @@ setup(
     version="0.1.1",
     packages=find_packages(),
     install_requires=[
-        'Django>=1.10'
+        'Django>=1.10',
         'geoip2>=2.4'
     ],
     include_package_data=True,
