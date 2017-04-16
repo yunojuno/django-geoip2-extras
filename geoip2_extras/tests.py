@@ -26,7 +26,8 @@ class GeoIP2MiddlewareTests(TestCase):
         }
 
     def test_remote_addr(self):
-        request = mock.Mock()
+        request = mock.Mock(META={})
+        self.assertEqual(self.middleware.remote_addr(request), '0.0.0.0')
         request.META = {
             'REMOTE_ADDR': '1.2.3.4'
         }
@@ -85,16 +86,12 @@ class GeoIP2MiddlewareTests(TestCase):
 
     @mock.patch('geoip2_extras.middleware.GeoIP2')
     def test_init(self, mock_geo2):
-        """Test we can switch off the middleware using waffle."""
-        # test: switch ON, should set up geoip
-        with override_settings(GEOIP2_MIDDLEWARE_ENABLED=True):
-            middleware = GeoIP2Middleware(GeoIP2MiddlewareTests.get_response)
-            self.assertEqual(middleware.get_response, GeoIP2MiddlewareTests.get_response)
-
-            # test: switch ON, but GeoIP2 can't be initialised
-            mock_geo2.side_effect = GeoIP2Exception('Foo')
-            self.assertRaises(
-                MiddlewareNotUsed,
-                GeoIP2Middleware,
-                GeoIP2MiddlewareTests.get_response
-            )
+        middleware = GeoIP2Middleware(GeoIP2MiddlewareTests.get_response)
+        self.assertEqual(middleware.get_response, GeoIP2MiddlewareTests.get_response)
+        # test: GeoIP2 can't be initialised
+        mock_geo2.side_effect = GeoIP2Exception()
+        self.assertRaises(
+            MiddlewareNotUsed,
+            GeoIP2Middleware,
+            GeoIP2MiddlewareTests.get_response
+        )

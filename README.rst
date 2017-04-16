@@ -7,7 +7,7 @@
 Django GeoIP2 Extras
 --------------------
 
-Useful extras based on the ``django.contrib.gis.geoip2`` package, using
+Useful extras based on the ``django.contrib.gis.geoip2`` module, using
 the `MaxMind GeoIP2 Lite <http://dev.maxmind.com/geoip/geoip2/geolite2/>`_ database.
 
 The first feature in this package is a Django middleware class that can
@@ -21,6 +21,9 @@ relies on the same underlying requirements:
 
     *In order to perform IP-based geolocation, the GeoIP2 object requires the geoip2 Python library and the GeoIP Country and/or City datasets in binary format (the CSV files will not work!). Grab the GeoLite2-Country.mmdb.gz and GeoLite2-City.mmdb.gz files and unzip them in a directory corresponding to the GEOIP_PATH setting.*
 
+In addition, the middleware follows the 'new' middleware pattern, and therefore
+does **not** support Django 1.9 or below. This is a 1.10 and above package.
+
 Installation
 ============
 
@@ -31,21 +34,23 @@ This package can be installed from PyPI as ``django-geoip2-extras``:
     $ pip install django-geoip2-extras
 
 If you want to add the country-level information to incoming requests, add the
-middleware to your project settings. NB The ``GeoIP2Middleware`` relies on the ``SessionMiddleware``:
+middleware to your project settings. NB The ``GeoIP2Middleware`` relies on the ``SessionMiddleware``, and must come after it:
 
 .. code:: python
 
     MIDDLEWARE = (
-        'django.middleware.common.CommonMiddleware',
+        ...,
         'django.contrib.sessions.middleware.SessionMiddleware',
         'geoip2_extras.middleware.GeoIP2Middleware',
+        ...
     )
 
 The middleware will not be active unless you add a setting for
-the default ``GEOIP_PATH``, and activate the middleware:
+the default ``GEOIP_PATH`` - this is the default Django GeoIP2 behaviour:
 
 .. code:: python
 
+    # settings.py
     GEOIP_PATH = os.path.dirname(__file__)
 
 NB Loading this package does *not* install the `MaxMind database <http://dev.maxmind.com/geoip/geoip2/geolite2/>`_
@@ -57,7 +62,7 @@ up-to-date is out of scope for this project.
 Usage
 =====
 
-Once the middleware is configured, you will be able to access Country level
+Once the middleware is added, you will be able to access Country level
 information on the request object:
 
 .. code:: python
@@ -68,6 +73,21 @@ information on the request object:
         'country_code': 'GB',
         'country_name': 'United Kingdom'
     }
+
+If the IP address cannot be found (e.g. localhost), then a default 'unknown'
+country dict is used.
+
+.. code:: python
+
+    >>> request.country
+    {
+        'ip_address': '127.0.0.1',
+        'country_code': 'XX',
+        'country_name': 'unknown'
+    }
+
+This prevents the middleware from re-requesting the address on each request -
+it effectively marks the IP as a bad address.
 
 Tests
 =====
