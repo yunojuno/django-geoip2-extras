@@ -1,16 +1,16 @@
 # -*- coding: utf-8 -*-
-"""request_token package setup."""
-import os
+from os import path, pardir, chdir
+
 from setuptools import setup, find_packages
 
-README = open(os.path.join(os.path.dirname(__file__), 'README.rst')).read()
+README = open(path.join(path.dirname(__file__), 'README.rst')).read()
 
 # allow setup.py to be run from any path
-os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
+chdir(path.normpath(path.join(path.abspath(__file__), pardir)))
 
 setup(
     name="django-geoip2-extras",
-    version="0.1.1",
+    version="0.1.2",
     packages=find_packages(),
     install_requires=[
         'Django>=1.10',
