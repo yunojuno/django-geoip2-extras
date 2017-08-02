@@ -54,19 +54,21 @@ class GeoIP2Middleware(object):
 
     def remote_addr(self, request):
         """Return client IP."""
-        if 'HTTP_X_FORWARDED_FOR' in request.META:
-            # The last IP in the chain is the only one that Heroku can guarantee
-            # - prior IPs may be spoofed, but this is the one that connected to
-            # the Heroku routing infrastructure. NB if the request came through
-            # a proxy this may be the proxy IP. The first IP in the list _should_
-            # be the original client, but Heroku can't guarantee that as HTTP
-            # headers can be spoofed. Basically - don't be the farm on an IP
-            # being correct, but we know the last one is the one that connected
-            # to Heroku.
-            # http://stackoverflow.com/a/37061471/45698
-            return request.META.get('HTTP_X_FORWARDED_FOR').split(',')[-1]
-        else:
-            return request.META.get('REMOTE_ADDR', '0.0.0.0')
+        header = (
+            request.META.get('HTTP_X_FORWARDED_FOR') or
+            request.META.get('REMOTE_ADDR') or
+            '0.0.0.0'
+        )
+        # The last IP in the chain is the only one that Heroku can guarantee
+        # - prior IPs may be spoofed, but this is the one that connected to
+        # the Heroku routing infrastructure. NB if the request came through
+        # a proxy this may be the proxy IP. The first IP in the list _should_
+        # be the original client, but Heroku can't guarantee that as HTTP
+        # headers can be spoofed. Basically - don't bet the farm on an IP
+        # being correct, but we know the last one is the one that connected
+        # to Heroku.
+        # http://stackoverflow.com/a/37061471/45698
+        return header.split(',')[-1]
 
     def country(self, ip_address):
         """

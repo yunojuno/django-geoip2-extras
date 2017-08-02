@@ -36,6 +36,10 @@ class GeoIP2MiddlewareTests(TestCase):
         self.assertEqual(self.middleware.remote_addr(request), '8.8.8.8')
         request.META['HTTP_X_FORWARDED_FOR'] = '1.2.3.4,8.8.8.8'
         self.assertEqual(self.middleware.remote_addr(request), '8.8.8.8')
+        request.META['HTTP_X_FORWARDED_FOR'] = None
+        self.assertEqual(self.middleware.remote_addr(request), '1.2.3.4')
+        request.META['REMOTE_ADDR'] = None
+        self.assertEqual(self.middleware.remote_addr(request), '0.0.0.0')
 
     @mock.patch.object(GeoIP2, 'country')
     def test_country(self, mock_country):
