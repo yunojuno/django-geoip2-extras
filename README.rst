@@ -84,7 +84,7 @@ information on the request object:
 Missing / incomplete data will be None.
 
 If the IP address cannot be found (e.g. '127.0.0.1'), then a default 'unknown'
-country is used, with a code of 'XX'. The GeoData class has a `is_unkown` property to make it easier to use:
+country is used, with a code of 'XX':
 
 .. code:: python
 
