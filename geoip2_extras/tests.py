@@ -7,6 +7,7 @@ from django.test import TestCase, override_settings
 
 from .middleware import (
     GeoIP2Middleware,
+    GeoData,
     AddressNotFoundError
 )
 
@@ -24,6 +25,7 @@ class GeoIP2MiddlewareTests(TestCase):
             'country_code': 'GB',
             'country_name': 'United Kingdom'
         }
+        self.test_geo_data = GeoData(self.test_ip, **self.test_country)
 
     def test_remote_addr(self):
         request = mock.Mock(META={})
@@ -44,20 +46,20 @@ class GeoIP2MiddlewareTests(TestCase):
     @mock.patch.object(GeoIP2, 'country')
     def test_country(self, mock_country):
         mock_country.return_value = self.test_country
-        country = self.middleware.country(self.test_ip)
-        self.assertEqual(country['ip_address'], '8.8.8.8')
-        self.assertEqual(country['country_code'], 'GB')
-        self.assertEqual(country['country_name'], 'United Kingdom')
+        data = self.middleware.country(self.test_ip)
+        self.assertEqual(data.ip_address, '8.8.8.8')
+        self.assertEqual(data.country_code, 'GB')
+        self.assertEqual(data.country_name, 'United Kingdom')
 
         mock_country.side_effect = AddressNotFoundError()
-        country = self.middleware.country(self.test_ip)
-        self.assertEqual(country['ip_address'], '8.8.8.8')
-        self.assertEqual(country['country_code'], GeoIP2Middleware.UNKNOWN_COUNTRY_CODE)
-        self.assertEqual(country['country_name'], GeoIP2Middleware.UNKNOWN_COUNTRY_NAME)
+        data = self.middleware.country(self.test_ip)
+        self.assertEqual(data.ip_address, '8.8.8.8')
+        self.assertEqual(data.country_code, GeoData.UNKNOWN_COUNTRY_CODE)
+        self.assertEqual(data.country_name, GeoData.UNKNOWN_COUNTRY_NAME)
 
         mock_country.side_effect = Exception()
-        country = self.middleware.country(self.test_ip)
-        self.assertIsNone(country)
+        data = self.middleware.country(self.test_ip)
+        self.assertIsNone(data)
 
     @mock.patch.object(GeoIP2Middleware, 'country')
     def test_middleware_call(self, mock_country):
@@ -69,22 +71,22 @@ class GeoIP2MiddlewareTests(TestCase):
         request.session = {}
         middleware(request)
         mock_country.assert_called_with(self.test_ip)
-        self.assertEqual(request.country, mock_country.return_value)
+        self.assertEqual(request.geo_data, mock_country.return_value)
         self.assertEqual(request.session[GeoIP2Middleware.SESSION_KEY], mock_country.return_value)
 
         # test: object in session does not match current IP
         mock_country.reset_mock()
-        request.session[GeoIP2Middleware.SESSION_KEY] = self.test_country
-        request.session[GeoIP2Middleware.SESSION_KEY]['ip_address'] = '1.2.3.4'
+        request.session[GeoIP2Middleware.SESSION_KEY] = self.test_geo_data
+        request.session[GeoIP2Middleware.SESSION_KEY].ip_address = '1.2.3.4'
         middleware(request)
         mock_country.assert_called_with(self.test_ip)
-        self.assertEqual(request.country, mock_country.return_value)
+        self.assertEqual(request.geo_data, mock_country.return_value)
         self.assertEqual(request.session[GeoIP2Middleware.SESSION_KEY], mock_country.return_value)
 
         # test: session object is up-to-date
         mock_country.reset_mock()
-        request.session[GeoIP2Middleware.SESSION_KEY] = self.test_country
-        request.session[GeoIP2Middleware.SESSION_KEY]['ip_address'] = self.test_ip
+        request.session[GeoIP2Middleware.SESSION_KEY] = self.test_geo_data
+        request.session[GeoIP2Middleware.SESSION_KEY].ip_address = self.test_ip
         middleware(request)
         mock_country.assert_not_called()
 
