@@ -8,6 +8,38 @@ from django.core.exceptions import MiddlewareNotUsed
 logger = logging.getLogger(__name__)
 
 
+class GeoData(object):
+
+    """Container for GeoIP2 return data."""
+
+    UNKNOWN_COUNTRY_CODE = 'XX'
+    UNKNOWN_COUNTRY_NAME = 'unknown'
+
+    def __init__(self, ip_address, **geoip_data):
+        self.ip_address = ip_address
+        self.city = geoip_data.get('city')
+        self.country_code = geoip_data.get('country_code')
+        self.country_name = geoip_data.get('country_name')
+        self.dma_code = geoip_data.get('dma_code')
+        self.latitude = geoip_data.get('latitude')
+        self.longitude = geoip_data.get('longitude')
+        self.postal_code = geoip_data.get('postal_code')
+        self.region = geoip_data.get('region')
+
+    @property
+    def is_unknown(self):
+        return self.country_code == GeoData.UNKNOWN_COUNTRY_CODE
+
+    @classmethod
+    def unknown_country(cls, ip_address):
+        """Return a new GeoData object representing an unknown country."""
+        return GeoData(
+            ip_address=ip_address,
+            country_code=GeoData.UNKNOWN_COUNTRY_CODE,
+            country_name=GeoData.UNKNOWN_COUNTRY_NAME
+        )
+
+
 class GeoIP2Middleware(object):
 
     """
@@ -23,8 +55,6 @@ class GeoIP2Middleware(object):
 
     """
     SESSION_KEY = 'geoip2'
-    UNKNOWN_COUNTRY_CODE = 'XX'
-    UNKNOWN_COUNTRY_NAME = 'unknown'
 
     def __init__(self, get_response):
         """Check settings to see if middleware is enabled, and try to init GeoIP2."""
@@ -32,7 +62,8 @@ class GeoIP2Middleware(object):
             self.geoip2 = GeoIP2()
         except GeoIP2Exception:
             raise MiddlewareNotUsed("Error loading GeoIP2 data")
-        self.get_response = get_response
+        else:
+            self.get_response = get_response
 
     def __call__(self, request):
         """
@@ -46,10 +77,10 @@ class GeoIP2Middleware(object):
         ip_address = self.remote_addr(request)
         data = request.session.get(GeoIP2Middleware.SESSION_KEY)
         if data is None:
-            data = self.country(ip_address)
-        elif data['ip_address'] != ip_address:
-            data = self.country(ip_address)
-        request.session[GeoIP2Middleware.SESSION_KEY] = request.country = data
+            data = self.get_geo_data(ip_address)
+        elif data.ip_address != ip_address:
+            data = self.get_geo_data(ip_address)
+        request.session[GeoIP2Middleware.SESSION_KEY] = request.geo_data = data
         return self.get_response(request)
 
     def remote_addr(self, request):
@@ -70,28 +101,41 @@ class GeoIP2Middleware(object):
         # http://stackoverflow.com/a/37061471/45698
         return header.split(',')[-1]
 
-    def country(self, ip_address):
-        """
-        Return dict containing country info from GeoIP2.
+    def get_geo_data(self, ip_address):
+        """Return City and / or Country data for an IP address."""
+        return self.city(ip_address) if self.geoip2._city else self.country(ip_address)
 
-        This method does the actual lookup. If the address cannot be found (
-        e.g. localhost) then it will still return a dict that can be stashed
-        in the session to prevent repeated invalid lookups. If the lookup raises
-        any other exception it returns None, so that future requests _will_
-        repeat the lookup.
+    def country(self, ip_address):
+        """Return GeoIP2 Country database data."""
+        return self._geoip2(ip_address, self.geoip2.country)
+
+    def city(self, ip_address):
+        """Return GeoIP2 City database data."""
+        return self._geoip2(ip_address, self.geoip2.city)
+
+    def _geoip2(self, ip_address, geo_func):
+        """
+        Return GeoData object containing info from GeoIP2.
+
+        This method does the actual lookup, using the geoip2 method specified.
+
+        Args:
+            ip_address:  the IP address to look up, as a string.
+            geo_func: a function, must be GeoIP2.city or GeoIP2.country,
+                used to do the IP lookup.
+                
+        Returns a GeoData object. If the address cannot be found (e.g. localhost)
+            then it will still return an object that can be stashed in the session
+            to prevent repeated invalid lookups. If the lookup raises any other
+            exception it returns None, so that future requests _will_ repeat the lookup.
 
         """
         try:
-            country = self.geoip2.country(ip_address)
-            country['ip_address'] = ip_address
-            return country
+            return GeoData(ip_address, **geo_func(ip_address))
         except AddressNotFoundError:
             logger.debug("IP address not found in MaxMind database: %s", ip_address)
-            return {
-                'ip_address': ip_address,
-                'country_code': GeoIP2Middleware.UNKNOWN_COUNTRY_CODE,
-                'country_name': GeoIP2Middleware.UNKNOWN_COUNTRY_NAME
-            }
+            return GeoData.unknown_country(ip_address)
+        except GeoIP2Exception:
+            logger.exception("GeoIP2 exception raised for %s", ip_address)
         except Exception:
-            logger.exception("Error raised looking up remote_addr: %s", ip_address)
-            return None
+            logger.exception("Error raised looking up geoip2 data for %s", ip_address)
