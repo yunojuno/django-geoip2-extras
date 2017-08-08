@@ -117,14 +117,17 @@ class GeoIP2Middleware(object):
         """
         Return GeoData object containing info from GeoIP2.
 
-        This method does the actual lookup. It will use the City database if
-        one exists, else it will default to the Country database. If neither
-        exist the the middleware _should_ be disabled in the __init__ method.
+        This method does the actual lookup, using the geoip2 method specified.
 
-        If the address cannot be found (e.g. localhost) then it will still
-        return an object that can be stashed in the session to prevent repeated
-        invalid lookups. If the lookup raises any other exception it returns
-        None, so that future requests _will_ repeat the lookup.
+        Args:
+            ip_address:  the IP address to look up, as a string.
+            geo_func: a function, must be GeoIP2.city or GeoIP2.country,
+                used to do the IP lookup.
+                
+        Returns a GeoData object. If the address cannot be found (e.g. localhost)
+            then it will still return an object that can be stashed in the session
+            to prevent repeated invalid lookups. If the lookup raises any other
+            exception it returns None, so that future requests _will_ repeat the lookup.
 
         """
         try:
