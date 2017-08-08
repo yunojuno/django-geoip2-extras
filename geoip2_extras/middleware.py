@@ -26,8 +26,9 @@ class GeoData(object):
         self.postal_code = geoip_data.get('postal_code')
         self.region = geoip_data.get('region')
 
+    @property
     def is_unknown(self):
-        return self.county_code == GeoData.UNKNOWN_COUNTRY_CODE
+        return self.country_code == GeoData.UNKNOWN_COUNTRY_CODE
 
     @classmethod
     def unknown_country(cls, ip_address):
