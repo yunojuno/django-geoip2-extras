@@ -56,7 +56,7 @@ class GeoIP2Middleware(object):
     """
     SESSION_KEY = 'geoip2'
 
-    def __init__(self, get_response):
+    def __init__(self, get_response=None):
         """Check settings to see if middleware is enabled, and try to init GeoIP2."""
         try:
             self.geoip2 = GeoIP2()
