@@ -4,14 +4,11 @@
 .. image:: https://travis-ci.org/yunojuno/django-geoip2-extras.svg
     :target: https://travis-ci.org/yunojuno/django-geoip2-extras
 
-Django GeoIP2 Extras
---------------------
-
-Python2/3
----------
-
 **The master branch of this project is now Python3 only. Python2 support is
 restricted to the python2 branch.**
+
+Django GeoIP2 Extras
+--------------------
 
 Useful extras based on the ``django.contrib.gis.geoip2`` module, using
 the `MaxMind GeoIP2 Lite <http://dev.maxmind.com/geoip/geoip2/geolite2/>`_ database.
