@@ -60,7 +60,7 @@ class GeoIP2Middleware(object):
         """Check settings to see if middleware is enabled, and try to init GeoIP2."""
         try:
             self.geoip2 = GeoIP2()
-        except GeoIP2Exception:
+        except Exception:
             raise MiddlewareNotUsed("Error loading GeoIP2 data")
         else:
             self.get_response = get_response
@@ -123,7 +123,7 @@ class GeoIP2Middleware(object):
             ip_address:  the IP address to look up, as a string.
             geo_func: a function, must be GeoIP2.city or GeoIP2.country,
                 used to do the IP lookup.
-                
+
         Returns a GeoData object. If the address cannot be found (e.g. localhost)
             then it will still return an object that can be stashed in the session
             to prevent repeated invalid lookups. If the lookup raises any other

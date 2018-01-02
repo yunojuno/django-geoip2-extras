@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-import mock
+from unittest import mock
 
 from django.contrib.gis.geoip2 import GeoIP2, GeoIP2Exception
 from django.core.exceptions import MiddlewareNotUsed
@@ -44,7 +43,6 @@ class GeoIP2MiddlewareTests(TestCase):
             'postal_code': 90210,
             'region': 'CA'
         }
-         # self.test_geo_data = GeoData(self.test_ip, **self.test_country)
 
     def test_remote_addr(self):
         request = mock.Mock(META={})
@@ -108,7 +106,7 @@ class GeoIP2MiddlewareTests(TestCase):
 
         # test: object in session does not match current IP
         mock_country.reset_mock()
-        request.session[GeoIP2Middleware.SESSION_KEY] = GeoData(ip_address=self.test_ip, **self.test_city)
+        request.session[GeoIP2Middleware.SESSION_KEY] = GeoData(ip_address=self.test_ip, **self.test_city)  # noqa
         request.session[GeoIP2Middleware.SESSION_KEY].ip_address = '1.2.3.4'
         middleware(request)
         mock_country.assert_called_with(self.test_ip)
@@ -117,7 +115,7 @@ class GeoIP2MiddlewareTests(TestCase):
 
         # test: session object is up-to-date
         mock_country.reset_mock()
-        request.session[GeoIP2Middleware.SESSION_KEY] = GeoData(ip_address=self.test_ip, **self.test_city)
+        request.session[GeoIP2Middleware.SESSION_KEY] = GeoData(ip_address=self.test_ip, **self.test_city)  # noqa
         request.session[GeoIP2Middleware.SESSION_KEY].ip_address = self.test_ip
         middleware(request)
         mock_country.assert_not_called()
@@ -126,8 +124,8 @@ class GeoIP2MiddlewareTests(TestCase):
     def test_init(self, mock_geo2):
         middleware = GeoIP2Middleware(GeoIP2MiddlewareTests.get_response)
         self.assertEqual(middleware.get_response, GeoIP2MiddlewareTests.get_response)
-        # test: GeoIP2 can't be initialised
-        mock_geo2.side_effect = GeoIP2Exception()
+        # Issue #4: database missing, raises AttributeError
+        mock_geo2.side_effect = Exception()
         self.assertRaises(
             MiddlewareNotUsed,
             GeoIP2Middleware,

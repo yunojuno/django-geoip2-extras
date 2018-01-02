@@ -7,6 +7,12 @@
 Django GeoIP2 Extras
 --------------------
 
+Python2/3
+---------
+
+**The master branch of this project is now Python3 only. Python2 support is
+restricted to the python2 branch.**
+
 Useful extras based on the ``django.contrib.gis.geoip2`` module, using
 the `MaxMind GeoIP2 Lite <http://dev.maxmind.com/geoip/geoip2/geolite2/>`_ database.
 
@@ -54,7 +60,7 @@ the default ``GEOIP_PATH`` - this is the default Django GeoIP2 behaviour:
     GEOIP_PATH = os.path.dirname(__file__)
 
 NB Loading this package does *not* install the `MaxMind database <http://dev.maxmind.com/geoip/geoip2/geolite2/>`_.
-That is your responsibility. The Country database is 2.7MB, and could be added to most project comfortably, but it is updated regularly, and keeping that up-to-date is out of scope for this project. The City database is 27MB, and is probably not suitable for adding to source control. There are various solutions out on the web for pulling in the City database as part of a CD process. 
+That is your responsibility. The Country database is 2.7MB, and could be added to most project comfortably, but it is updated regularly, and keeping that up-to-date is out of scope for this project. The City database is 27MB, and is probably not suitable for adding to source control. There are various solutions out on the web for pulling in the City database as part of a CD process.
 
 Usage
 =====
