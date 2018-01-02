@@ -60,7 +60,11 @@ class GeoIP2Middleware(object):
         """Check settings to see if middleware is enabled, and try to init GeoIP2."""
         try:
             self.geoip2 = GeoIP2()
-        except Exception:
+            # this addresses a bug in Django's GeoIP2 implementation whereby it expects
+            # there to be a country or city file, and blows up if there isn't one.
+            if self.geoip2._reader is None:
+                raise GeoIP2Exception("MaxMind database not found at GEOIP_PATH")
+        except GeoIP2Exception:
             raise MiddlewareNotUsed("Error loading GeoIP2 data")
         else:
             self.get_response = get_response

@@ -4,6 +4,8 @@ from django.contrib.gis.geoip2 import GeoIP2, GeoIP2Exception
 from django.core.exceptions import MiddlewareNotUsed
 from django.test import TestCase, override_settings
 
+from geoip2.database import Reader
+
 from .middleware import (
     GeoIP2Middleware,
     GeoData,
@@ -26,6 +28,8 @@ class GeoIP2MiddlewareTests(TestCase):
     def get_response():
         pass
 
+    # fix for django GeoIP2 bug
+    @mock.patch.object(GeoIP2, '_reader', mock.Mock(Reader))
     def setUp(self):
         self.middleware = GeoIP2Middleware(GeoIP2MiddlewareTests.get_response)
         self.test_ip = '8.8.8.8'
@@ -92,6 +96,8 @@ class GeoIP2MiddlewareTests(TestCase):
         mock_city.side_effect = Exception()
         self.assertIsNone(self.middleware.city(self.test_ip))
 
+    # fix for django GeoIP2 bug
+    @mock.patch.object(GeoIP2, '_reader', mock.Mock(Reader))
     @mock.patch.object(GeoIP2Middleware, 'country')
     def test_middleware_call(self, mock_country):
         middleware = GeoIP2Middleware(lambda r: None)
@@ -124,8 +130,19 @@ class GeoIP2MiddlewareTests(TestCase):
     def test_init(self, mock_geo2):
         middleware = GeoIP2Middleware(GeoIP2MiddlewareTests.get_response)
         self.assertEqual(middleware.get_response, GeoIP2MiddlewareTests.get_response)
-        # Issue #4: database missing, raises AttributeError
-        mock_geo2.side_effect = Exception()
+
+        # mock out a GeoIP2 with no _reader set - mimics the case
+        # when neither country nor city databases exist.
+        mock_geo2.return_value._reader = None
+        self.assertRaises(
+            MiddlewareNotUsed,
+            GeoIP2Middleware,
+            GeoIP2MiddlewareTests.get_response
+        )
+
+        # now force a known exception in the init
+        mock_geo2.return_value._reader = mock.Mock(spec=Reader)
+        mock_geo2.side_effect = GeoIP2Exception()
         self.assertRaises(
             MiddlewareNotUsed,
             GeoIP2Middleware,
