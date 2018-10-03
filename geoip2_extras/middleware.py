@@ -8,7 +8,7 @@ from django.core.exceptions import MiddlewareNotUsed
 logger = logging.getLogger(__name__)
 
 
-class GeoData(object):
+class GeoData(dict):
 
     """Container for GeoIP2 return data."""
 
@@ -60,7 +60,8 @@ class GeoIP2Middleware(object):
         """Check settings to see if middleware is enabled, and try to init GeoIP2."""
         try:
             self.geoip2 = GeoIP2()
-            # See https://code.djangoproject.com/ticket/28981
+            # this addresses a bug in Django's GeoIP2 implementation whereby it expects
+            # there to be a country or city file, and blows up if there isn't one.
             if self.geoip2._reader is None:
                 raise GeoIP2Exception("MaxMind database not found at GEOIP_PATH")
         except GeoIP2Exception:
@@ -79,9 +80,9 @@ class GeoIP2Middleware(object):
         """
         ip_address = self.remote_addr(request)
         data = request.session.get(GeoIP2Middleware.SESSION_KEY)
-        if data is None:
+        if not data:
             data = self.get_geo_data(ip_address)
-        elif data.ip_address != ip_address:
+        elif data['ip_address'] != ip_address:
             data = self.get_geo_data(ip_address)
         request.session[GeoIP2Middleware.SESSION_KEY] = request.geo_data = data
         return self.get_response(request)
