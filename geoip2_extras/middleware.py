@@ -1,11 +1,21 @@
 import logging
+from typing import Callable
 
 from geoip2.errors import AddressNotFoundError
 
+from django.conf import settings
 from django.contrib.gis.geoip2 import GeoIP2, GeoIP2Exception
 from django.core.exceptions import MiddlewareNotUsed
+from django.core.cache import caches, InvalidCacheBackendError
 
 logger = logging.getLogger(__name__)
+try:
+    GEO_CACHE = caches['geoip2']
+except InvalidCacheBackendError:
+    logger.warning("GeoIP2 disabled as no 'geoip2' cache is configured")
+    GEO_CACHE = None
+
+GEO_CACHE_TIMEOUT = getattr(settings, 'GEOIP2_EXTRAS_GEO_CACHE_TIMEOUT', 3600)
 
 
 class GeoData(object):
@@ -54,7 +64,6 @@ class GeoIP2Middleware(object):
     changes.
 
     """
-    SESSION_KEY = 'geoip2'
 
     def __init__(self, get_response):
         """Check settings to see if middleware is enabled, and try to init GeoIP2."""
@@ -72,18 +81,11 @@ class GeoIP2Middleware(object):
         """
         Add country info _before_ view is called.
 
-        The country info is stored in the session between requests,
-        so we don't have to do the lookup on each request, unless the
-        client IP has changed.
+        The country info is cached against the IP address.
 
         """
         ip_address = self.remote_addr(request)
-        data = request.session.get(GeoIP2Middleware.SESSION_KEY)
-        if data is None:
-            data = self.get_geo_data(ip_address)
-        elif data.ip_address != ip_address:
-            data = self.get_geo_data(ip_address)
-        request.session[GeoIP2Middleware.SESSION_KEY] = request.geo_data = data
+        request.geo_data = self.geo_data(ip_address)
         return self.get_response(request)
 
     def remote_addr(self, request):
@@ -104,37 +106,31 @@ class GeoIP2Middleware(object):
         # http://stackoverflow.com/a/37061471/45698
         return header.split(',')[-1]
 
-    def get_geo_data(self, ip_address):
-        """Return City and / or Country data for an IP address."""
-        return self.city(ip_address) if self.geoip2._city else self.country(ip_address)
-
-    def country(self, ip_address):
-        """Return GeoIP2 Country database data."""
-        return self._geoip2(ip_address, self.geoip2.country)
-
-    def city(self, ip_address):
-        """Return GeoIP2 City database data."""
-        return self._geoip2(ip_address, self.geoip2.city)
-
-    def _geoip2(self, ip_address, geo_func):
+    def geo_data(self, ip_address: str) -> GeoData:
         """
-        Return GeoData object containing info from GeoIP2.
+        Return GeoIP2data for an IP address.
 
-        This method does the actual lookup, using the geoip2 method specified.
-
-        Args:
-            ip_address:  the IP address to look up, as a string.
-            geo_func: a function, must be GeoIP2.city or GeoIP2.country,
-                used to do the IP lookup.
-
-        Returns a GeoData object. If the address cannot be found (e.g. localhost)
-            then it will still return an object that can be stashed in the session
-            to prevent repeated invalid lookups. If the lookup raises any other
-            exception it returns None, so that future requests _will_ repeat the lookup.
+        If we have a GEO_CACHE set, then lookup in that first, else we do
+        the GeoIP2 lookup on each request.
 
         """
+        if GEO_CACHE is None:
+            data = self._geo_data_lookup(ip_address)
+        else:
+            data = GEO_CACHE(ip_address) or self._geo_data_lookup(ip_address)
+            GEO_CACHE.set(ip_address, data, GEO_CACHE_TIMEOUT)
+        return data
+
+    @property
+    def _geo_data_func(self) -> Callable[[str], dict]:
+        """Return the GeoIP2 lookup function to use, based on available database."""
+        geo = self.geoip2
+        return geo.city if geo._city else geo.country
+
+    def _geo_data_lookup(self, ip_address: str) -> GeoData:
+        """Perform the actual GeoIP2 database lookup."""
         try:
-            return GeoData(ip_address, **geo_func(ip_address))
+            data = self._geo_data_func(ip_address)
         except AddressNotFoundError:
             logger.debug("IP address not found in MaxMind database: %s", ip_address)
             return GeoData.unknown_country(ip_address)
@@ -142,3 +138,5 @@ class GeoIP2Middleware(object):
             logger.exception("GeoIP2 exception raised for %s", ip_address)
         except Exception:
             logger.exception("Error raised looking up geoip2 data for %s", ip_address)
+        else:
+            return GeoData(ip_address, **data)

@@ -33,11 +33,11 @@ class GeoIP2MiddlewareTests(TestCase):
     def setUp(self):
         self.middleware = GeoIP2Middleware(GeoIP2MiddlewareTests.get_response)
         self.test_ip = '8.8.8.8'
-        self.test_country = {
+        self.test_country_data = {
             'country_code': 'GB',
             'country_name': 'United Kingdom'
         }
-        self.test_city = {
+        self.test_city_data = {
             'city': 'Los Angeles',
             'country_code': 'US',
             'country_name': 'United States',
@@ -47,6 +47,8 @@ class GeoIP2MiddlewareTests(TestCase):
             'postal_code': 90210,
             'region': 'CA'
         }
+        self.test_country = GeoData(self.test_ip, **self.test_country_data)
+        self.test_city = GeoData(self.test_ip, **self.test_city_data)
 
     def test_remote_addr(self):
         request = mock.Mock(META={})
@@ -63,32 +65,24 @@ class GeoIP2MiddlewareTests(TestCase):
         self.assertEqual(self.middleware.remote_addr(request), '0.0.0.0')
 
     @mock.patch.object(GeoIP2Middleware, '_geoip2')
-    def test_get_geo_data(self, mock__geoip2):
+    def test_geo_data(self, mock__geoip2):
         """Check that city / country routing works."""
         self.middleware.geoip2 = mock.Mock(_city=True)
-        self.middleware.get_geo_data(self.test_ip)
+        self.middleware.geo_data(self.test_ip)
         mock__geoip2.assert_called_with(self.test_ip, self.middleware.geoip2.city)
 
         self.middleware.geoip2 = mock.Mock(_city=None)
-        self.middleware.get_geo_data(self.test_ip)
+        self.middleware.geo_data(self.test_ip)
         mock__geoip2.assert_called_with(self.test_ip, self.middleware.geoip2.country)
 
     @mock.patch.object(GeoIP2, 'city')
     def test__geoip2(self, mock_city):
-        mock_city.return_value = self.test_city
+        mock_city.return_value = self.test_city_data
         data = self.middleware._geoip2(self.test_ip, mock_city)
-        self.assertEqual(data.ip_address, '8.8.8.8')
-        self.assertEqual(data.city, 'Los Angeles')
-        self.assertEqual(data.country_code, 'US')
-        self.assertEqual(data.country_name, 'United States')
-        self.assertEqual(data.dma_code, None)
-        self.assertEqual(data.latitude, 37.751)
-        self.assertEqual(data.longitude, -97.822)
-        self.assertEqual(data.postal_code, 90210)
-        self.assertEqual(data.region, 'CA')
+        self.assertEqual(data, self.test_city_data)
         mock_city.side_effect = AddressNotFoundError()
         data = self.middleware.city(self.test_ip)
-        self.assertTrue(data.is_unknown)
+        self.assertEqual(data, GeoData.unknown_country(self.test_ip).__dict__)
 
         mock_city.side_effect = GeoIP2Exception()
         self.assertIsNone(self.middleware.city(self.test_ip))
@@ -102,27 +96,28 @@ class GeoIP2MiddlewareTests(TestCase):
     def test_middleware_call(self, mock_country):
         middleware = GeoIP2Middleware(lambda r: None)
         request = mock.Mock(META={'REMOTE_ADDR': self.test_ip})
+        mock_country.return_value = self.test_country_data
 
         # test: clean session
         request.session = {}
         middleware(request)
         mock_country.assert_called_with(self.test_ip)
-        self.assertEqual(request.geo_data, mock_country.return_value)
+        self.assertEqual(request.geo_data, self.test_country)
         self.assertEqual(request.session[GeoIP2Middleware.SESSION_KEY], mock_country.return_value)
 
         # test: object in session does not match current IP
         mock_country.reset_mock()
-        request.session[GeoIP2Middleware.SESSION_KEY] = GeoData(ip_address=self.test_ip, **self.test_city)  # noqa
-        request.session[GeoIP2Middleware.SESSION_KEY].ip_address = '1.2.3.4'
+        request.session[GeoIP2Middleware.SESSION_KEY] = self.test_city_data
+        request.session[GeoIP2Middleware.SESSION_KEY]['ip_address'] = '1.2.3.4'
         middleware(request)
         mock_country.assert_called_with(self.test_ip)
-        self.assertEqual(request.geo_data, mock_country.return_value)
+        self.assertEqual(request.geo_data, self.test_country)
         self.assertEqual(request.session[GeoIP2Middleware.SESSION_KEY], mock_country.return_value)
 
         # test: session object is up-to-date
         mock_country.reset_mock()
-        request.session[GeoIP2Middleware.SESSION_KEY] = GeoData(ip_address=self.test_ip, **self.test_city)  # noqa
-        request.session[GeoIP2Middleware.SESSION_KEY].ip_address = self.test_ip
+        request.session[GeoIP2Middleware.SESSION_KEY] = self.test_city_data
+        request.session[GeoIP2Middleware.SESSION_KEY]['ip_address'] = self.test_ip
         middleware(request)
         mock_country.assert_not_called()
 

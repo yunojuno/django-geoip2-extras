@@ -13,7 +13,7 @@ setup(
     version="1.0.1",
     packages=find_packages(),
     install_requires=[
-        'Django>=1.10',
+        'Django>=1.11',
         'geoip2>=2.4'
     ],
     include_package_data=True,
@@ -28,7 +28,6 @@ setup(
     classifiers=[
         'Environment :: Web Environment',
         'Framework :: Django',
-        'Framework :: Django :: 1.10',
         'Framework :: Django :: 1.11',
         'Framework :: Django :: 2.0',
         'Intended Audience :: Developers',
