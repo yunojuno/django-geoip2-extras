@@ -3,10 +3,9 @@ from unittest import mock
 from django.contrib.gis.geoip2 import GeoIP2, GeoIP2Exception
 from django.core.exceptions import MiddlewareNotUsed
 from django.test import TestCase, override_settings
-
 from geoip2.database import Reader
 
-from .middleware import (
+from geoip2_extras.middleware import (
     GeoIP2Middleware,
     GeoData,
     AddressNotFoundError

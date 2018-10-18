@@ -10,8 +10,17 @@ DATABASES = {
     }
 }
 
-SECRET_KEY = "request_token"
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'django-geoip2-extras',
+    }
+}
+
+SECRET_KEY = "django-geoip2-extras"
 
 GEOIP_PATH = os.path.dirname(__file__)
+
+GEOIP2_MIDDLEWARE_ENABLED = True
 
 assert DEBUG is True, "This project is only intended to be used for testing."
