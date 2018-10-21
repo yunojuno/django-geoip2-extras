@@ -13,7 +13,10 @@ DATABASES = {
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'django-geoip2-extras',
+    },
+    'geoip2-extras': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'geoip2'
     }
 }
 

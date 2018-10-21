@@ -10,8 +10,8 @@ chdir(path.normpath(path.join(path.abspath(__file__), pardir)))
 
 setup(
     name="django-geoip2-extras",
-    version="1.0.1",
-    packages=find_packages(),
+    version="2.0-dev",
+    packages=find_packages(exclude=('tests',)),
     install_requires=[
         'Django>=1.11',
         'geoip2>=2.4'

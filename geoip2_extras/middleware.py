@@ -9,45 +9,12 @@ from django.core.exceptions import MiddlewareNotUsed
 from django.core.cache import caches, InvalidCacheBackendError
 
 logger = logging.getLogger(__name__)
-try:
-    GEO_CACHE = caches['geoip2']
-except InvalidCacheBackendError:
-    logger.warning("GeoIP2 disabled as no 'geoip2' cache is configured")
-    GEO_CACHE = None
 
 GEO_CACHE_TIMEOUT = getattr(settings, 'GEOIP2_EXTRAS_GEO_CACHE_TIMEOUT', 3600)
-
-
-class GeoData(object):
-
-    """Container for GeoIP2 return data."""
-
-    UNKNOWN_COUNTRY_CODE = 'XX'
-    UNKNOWN_COUNTRY_NAME = 'unknown'
-
-    def __init__(self, ip_address, **geoip_data):
-        self.ip_address = ip_address
-        self.city = geoip_data.get('city')
-        self.country_code = geoip_data.get('country_code')
-        self.country_name = geoip_data.get('country_name')
-        self.dma_code = geoip_data.get('dma_code')
-        self.latitude = geoip_data.get('latitude')
-        self.longitude = geoip_data.get('longitude')
-        self.postal_code = geoip_data.get('postal_code')
-        self.region = geoip_data.get('region')
-
-    @property
-    def is_unknown(self):
-        return self.country_code == GeoData.UNKNOWN_COUNTRY_CODE
-
-    @classmethod
-    def unknown_country(cls, ip_address):
-        """Return a new GeoData object representing an unknown country."""
-        return GeoData(
-            ip_address=ip_address,
-            country_code=GeoData.UNKNOWN_COUNTRY_CODE,
-            country_name=GeoData.UNKNOWN_COUNTRY_NAME
-        )
+GEO_DATA_ADDRESS_NOT_FOUND = {
+    'country_code': 'XX',
+    'country_name': 'unknown'
+}
 
 
 class GeoIP2Middleware(object):
@@ -68,10 +35,13 @@ class GeoIP2Middleware(object):
     def __init__(self, get_response):
         """Check settings to see if middleware is enabled, and try to init GeoIP2."""
         try:
+            self.cache = caches['geoip2-extras']
             self.geoip2 = GeoIP2()
             # See https://code.djangoproject.com/ticket/28981
             if self.geoip2._reader is None:
                 raise GeoIP2Exception("MaxMind database not found at GEOIP_PATH")
+        except InvalidCacheBackendError:
+            raise MiddlewareNotUsed("GeoIP2 disabled: cache not configured.")
         except GeoIP2Exception:
             raise MiddlewareNotUsed("Error loading GeoIP2 data")
         else:
@@ -84,8 +54,8 @@ class GeoIP2Middleware(object):
         The country info is cached against the IP address.
 
         """
-        ip_address = self.remote_addr(request)
-        request.geo_data = self.geo_data(ip_address)
+        request.remote_addr = self.remote_addr(request)
+        request.geo_data = self.geo_data(request.remote_addr)
         return self.get_response(request)
 
     def remote_addr(self, request):
@@ -106,37 +76,42 @@ class GeoIP2Middleware(object):
         # http://stackoverflow.com/a/37061471/45698
         return header.split(',')[-1]
 
-    def geo_data(self, ip_address: str) -> GeoData:
+    def geo_data(self, ip_address: str) -> dict:
         """
         Return GeoIP2data for an IP address.
 
-        If we have a GEO_CACHE set, then lookup in that first, else we do
-        the GeoIP2 lookup on each request.
+        If AddressNotFound occurs then we return the unknown
+        data, and cache it (as the IP address is not found);
+        if the GeoIP2 lookup fails, we return the unknown
+        data, but do _not_ cache it, as we want to try again
+        on the next request.
 
         """
-        if GEO_CACHE is None:
-            data = self._geo_data_lookup(ip_address)
+        data = self.cache.get(ip_address)
+        if data is not None:
+            return data
+            
+        data = self._city_or_country(ip_address)
+        if data is None:
+            data = GEO_DATA_ADDRESS_NOT_FOUND
+            data['remote_addr'] = ip_address
         else:
-            data = GEO_CACHE(ip_address) or self._geo_data_lookup(ip_address)
-            GEO_CACHE.set(ip_address, data, GEO_CACHE_TIMEOUT)
+            data['remote_addr'] = ip_address
+            self.cache.set(ip_address, data, GEO_CACHE_TIMEOUT)
         return data
 
-    @property
-    def _geo_data_func(self) -> Callable[[str], dict]:
-        """Return the GeoIP2 lookup function to use, based on available database."""
-        geo = self.geoip2
-        return geo.city if geo._city else geo.country
-
-    def _geo_data_lookup(self, ip_address: str) -> GeoData:
+    def _city_or_country(self, ip_address: str) -> dict:
         """Perform the actual GeoIP2 database lookup."""
         try:
-            data = self._geo_data_func(ip_address)
+            if self.geoip2._city:
+                return self.geoip2.city(ip_address)
+            else:
+                return self.geoip2.country(ip_address)
         except AddressNotFoundError:
             logger.debug("IP address not found in MaxMind database: %s", ip_address)
-            return GeoData.unknown_country(ip_address)
+            return GEO_DATA_ADDRESS_NOT_FOUND
         except GeoIP2Exception:
             logger.exception("GeoIP2 exception raised for %s", ip_address)
         except Exception:
             logger.exception("Error raised looking up geoip2 data for %s", ip_address)
-        else:
-            return GeoData(ip_address, **data)
+        return {} 

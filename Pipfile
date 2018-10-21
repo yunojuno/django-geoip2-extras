@@ -4,9 +4,12 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-django = "*"
-geoip2 = "*"
+"django-geoip2-extras" = {editable = true, path = "."}
+
+[dev-packages]
 tox = "*"
+coverage = "*"
+pylint = "*"
 
 [requires]
-python_version = "3.6.4"
+python_version = "3.6"
