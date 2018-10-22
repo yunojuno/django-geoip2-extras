@@ -16,7 +16,7 @@ CACHES = {
     },
     'geoip2-extras': {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'geoip2'
+        'LOCATION': 'some-random-string-key'
     }
 }
 
