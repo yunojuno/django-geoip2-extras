@@ -4,8 +4,7 @@
 .. image:: https://travis-ci.org/yunojuno/django-geoip2-extras.svg
     :target: https://travis-ci.org/yunojuno/django-geoip2-extras
 
-**The master branch of this project is now Python3 only. Python2 support is
-restricted to the python2 branch.**
+**The master branch of this project is now Python3 only.**
 
 Django GeoIP2 Extras
 --------------------
@@ -25,7 +24,7 @@ relies on the same underlying requirements:
     *In order to perform IP-based geolocation, the GeoIP2 object requires the geoip2 Python library and the GeoIP Country and/or City datasets in binary format (the CSV files will not work!). Grab the GeoLite2-Country.mmdb.gz and GeoLite2-City.mmdb.gz files and unzip them in a directory corresponding to the GEOIP_PATH setting.*
 
 In addition, the middleware follows the 'new' middleware pattern, and therefore
-does **not** support Django 1.9 or below. This is a 1.10 and above package.
+does **not** support Django 1.9 or below. This is a 1.10 and above package, and it only officially supports 1.11 and above.
 
 Installation
 ============
@@ -63,25 +62,25 @@ Usage
 =====
 
 Once the middleware is added, you will be able to access City and / or Country level
-information on the request object:
+information on the request object in a dict called `geo_data`:
 
 .. code:: python
 
-    >>> request.geo_data.ip_address
+    >>> request.geo_data['remote_addr']
     '1.2.3.4'
-    >>> request.geo_data.city
+    >>> request.geo_data['city']
     'Beverley Hills'
-    >>> request.geo_data.postal_code
+    >>> request.geo_data['postal_code']
     '90210'
-    >>> request.geo_data.region
+    >>> request.geo_data['region']
     'California'
-    >>> request.geo_data.country_code
+    >>> request.geo_data['country_code']
     'US'
-    >>> request.geo_data.country_name
+    >>> request.geo_data['country_name']
     'United States'
-    >>> request.geo_data.latitude
+    >>> request.geo_data['latitude']
     '34.0736'
-    >>> request.geo_data.longitude
+    >>> request.geo_data['longitude']
     '118.4004'
 
 Missing / incomplete data will be None.
@@ -91,14 +90,12 @@ country is used, with a code of 'XX':
 
 .. code:: python
 
-    >>> geo.ip_address
+    >>> geo['remote_addr']
     '127.0.0.1'
-    >>> geo.country_code
+    >>> geo['country_code']
     'XX'
-    >>> geo.country_name
+    >>> geo['country_name']
     'unknown'
-    >>> geo.is_unknown
-    True
 
 This prevents the middleware from re-requesting the address on each request - it effectively marks the IP as a bad address.
 
