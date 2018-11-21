@@ -4,7 +4,6 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-"django-geoip2-extras" = {editable = true, path = "."}
 
 [dev-packages]
 tox = "*"
