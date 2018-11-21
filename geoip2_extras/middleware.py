@@ -1,144 +1,116 @@
 import logging
+from typing import Callable
 
 from geoip2.errors import AddressNotFoundError
 
+from django.conf import settings
 from django.contrib.gis.geoip2 import GeoIP2, GeoIP2Exception
 from django.core.exceptions import MiddlewareNotUsed
+from django.core.cache import caches, InvalidCacheBackendError
+from django.http import HttpRequest, HttpResponse
 
 logger = logging.getLogger(__name__)
 
-
-class GeoData(object):
-
-    """Container for GeoIP2 return data."""
-
-    UNKNOWN_COUNTRY_CODE = 'XX'
-    UNKNOWN_COUNTRY_NAME = 'unknown'
-
-    def __init__(self, ip_address, **geoip_data):
-        self.ip_address = ip_address
-        self.city = geoip_data.get('city')
-        self.country_code = geoip_data.get('country_code')
-        self.country_name = geoip_data.get('country_name')
-        self.dma_code = geoip_data.get('dma_code')
-        self.latitude = geoip_data.get('latitude')
-        self.longitude = geoip_data.get('longitude')
-        self.postal_code = geoip_data.get('postal_code')
-        self.region = geoip_data.get('region')
-
-    @property
-    def is_unknown(self):
-        return self.country_code == GeoData.UNKNOWN_COUNTRY_CODE
-
-    @classmethod
-    def unknown_country(cls, ip_address):
-        """Return a new GeoData object representing an unknown country."""
-        return GeoData(
-            ip_address=ip_address,
-            country_code=GeoData.UNKNOWN_COUNTRY_CODE,
-            country_name=GeoData.UNKNOWN_COUNTRY_NAME
-        )
+GEO_CACHE_TIMEOUT = getattr(settings, 'GEOIP2_EXTRAS_GEO_CACHE_TIMEOUT', 3600)
 
 
-class GeoIP2Middleware(object):
+def unknown_address(ip_address: str) -> dict:
+    return {
+        'country_code': 'XX',
+        'country_name': 'unknown',
+        'remote_addr': ip_address
+    }
+
+
+def remote_addr(request: HttpRequest) -> str:
+    """Return client IP."""
+    header = (
+        request.META.get('HTTP_X_FORWARDED_FOR') or
+        request.META.get('REMOTE_ADDR') or
+        '0.0.0.0'
+    )
+    # The last IP in the chain is the only one that Heroku can guarantee
+    # - prior IPs may be spoofed, but this is the one that connected to
+    # the Heroku routing infrastructure. NB if the request came through
+    # a proxy this may be the proxy IP. The first IP in the list _should_
+    # be the original client, but Heroku can't guarantee that as HTTP
+    # headers can be spoofed. Basically - don't bet the farm on an IP
+    # being correct, but we know the last one is the one that connected
+    # to Heroku.
+    # http://stackoverflow.com/a/37061471/45698
+    return header.split(',')[-1]
+
+
+class GeoIP2Middleware:
 
     """
     Add GeoIP country info to each request.
 
-    This middleware will add a `country` attribute to each request
-    which contains the Django GeoIP2.country() info, along with the
-    source IP address used by the lookup.
-
-    The country is stashed in the session, so the actual database
-    lookup will only occur once per session, or when the IP address
-    changes.
+    This middleware will add a `get_data` attribute to each request
+    which contains the Django GeoIP2 city and / or country info (
+    depends on which geoip2 database is installed). The data is
+    cached against the IP address.
 
     """
-    SESSION_KEY = 'geoip2'
 
-    def __init__(self, get_response):
+    def __init__(self, get_response: Callable[[HttpRequest], HttpResponse]):
         """Check settings to see if middleware is enabled, and try to init GeoIP2."""
         try:
+            self.cache = caches['geoip2-extras']
             self.geoip2 = GeoIP2()
             # See https://code.djangoproject.com/ticket/28981
             if self.geoip2._reader is None:
                 raise GeoIP2Exception("MaxMind database not found at GEOIP_PATH")
+        except InvalidCacheBackendError:
+            raise MiddlewareNotUsed("GeoIP2 disabled: cache not configured.")
         except GeoIP2Exception:
             raise MiddlewareNotUsed("Error loading GeoIP2 data")
         else:
             self.get_response = get_response
 
-    def __call__(self, request):
+    def __call__(self, request: HttpRequest) -> HttpResponse:
         """
         Add country info _before_ view is called.
 
-        The country info is stored in the session between requests,
-        so we don't have to do the lookup on each request, unless the
-        client IP has changed.
+        The country info is cached against the IP address.
 
         """
-        ip_address = self.remote_addr(request)
-        data = request.session.get(GeoIP2Middleware.SESSION_KEY)
-        if data is None:
-            data = self.get_geo_data(ip_address)
-        elif data.ip_address != ip_address:
-            data = self.get_geo_data(ip_address)
-        request.session[GeoIP2Middleware.SESSION_KEY] = request.geo_data = data
+        request.remote_addr = remote_addr(request)
+        request.geo_data = self.geo_data(request.remote_addr)
         return self.get_response(request)
 
-    def remote_addr(self, request):
-        """Return client IP."""
-        header = (
-            request.META.get('HTTP_X_FORWARDED_FOR') or
-            request.META.get('REMOTE_ADDR') or
-            '0.0.0.0'
-        )
-        # The last IP in the chain is the only one that Heroku can guarantee
-        # - prior IPs may be spoofed, but this is the one that connected to
-        # the Heroku routing infrastructure. NB if the request came through
-        # a proxy this may be the proxy IP. The first IP in the list _should_
-        # be the original client, but Heroku can't guarantee that as HTTP
-        # headers can be spoofed. Basically - don't bet the farm on an IP
-        # being correct, but we know the last one is the one that connected
-        # to Heroku.
-        # http://stackoverflow.com/a/37061471/45698
-        return header.split(',')[-1]
-
-    def get_geo_data(self, ip_address):
-        """Return City and / or Country data for an IP address."""
-        return self.city(ip_address) if self.geoip2._city else self.country(ip_address)
-
-    def country(self, ip_address):
-        """Return GeoIP2 Country database data."""
-        return self._geoip2(ip_address, self.geoip2.country)
-
-    def city(self, ip_address):
-        """Return GeoIP2 City database data."""
-        return self._geoip2(ip_address, self.geoip2.city)
-
-    def _geoip2(self, ip_address, geo_func):
+    def geo_data(self, ip_address: str) -> dict:
         """
-        Return GeoData object containing info from GeoIP2.
+        Return GeoIP2data for an IP address.
 
-        This method does the actual lookup, using the geoip2 method specified.
-
-        Args:
-            ip_address:  the IP address to look up, as a string.
-            geo_func: a function, must be GeoIP2.city or GeoIP2.country,
-                used to do the IP lookup.
-
-        Returns a GeoData object. If the address cannot be found (e.g. localhost)
-            then it will still return an object that can be stashed in the session
-            to prevent repeated invalid lookups. If the lookup raises any other
-            exception it returns None, so that future requests _will_ repeat the lookup.
+        If AddressNotFound occurs then we return the unknown
+        data, and cache it (as the IP address is not found);
+        if the GeoIP2 lookup fails, we return the unknown
+        data, but do _not_ cache it, as we want to try again
+        on the next request.
 
         """
+        data = self.cache.get(ip_address)
+        if data is not None:
+            return data
+
         try:
-            return GeoData(ip_address, **geo_func(ip_address))
+            data = self._city_or_country(ip_address)
         except AddressNotFoundError:
             logger.debug("IP address not found in MaxMind database: %s", ip_address)
-            return GeoData.unknown_country(ip_address)
+            data = unknown_address(ip_address)
         except GeoIP2Exception:
             logger.exception("GeoIP2 exception raised for %s", ip_address)
-        except Exception:
-            logger.exception("Error raised looking up geoip2 data for %s", ip_address)
+            return
+        # we've had to look it up, so cache it
+        self.cache.set(ip_address, data, GEO_CACHE_TIMEOUT)
+        return data
+
+    def _city_or_country(self, ip_address: str) -> dict:
+        """Perform the actual GeoIP2 database lookup."""
+        if self.geoip2._city:
+            data = self.geoip2.city(ip_address)
+        else:
+            data = self.geoip2.country(ip_address)
+        data['remote_addr'] = ip_address
+        return data
