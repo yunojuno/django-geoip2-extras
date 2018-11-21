@@ -4,8 +4,12 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
+# django / geoip2 are installed from setup.py, or
+# install dev packages if you are working on the project.
+# see https://pipenv.readthedocs.io/en/latest/advanced/#pipfile-vs-setup-py
 
 [dev-packages]
+django-geoip2-extras = {editable = true, path = "."}
 tox = "*"
 coverage = "*"
 pylint = "*"

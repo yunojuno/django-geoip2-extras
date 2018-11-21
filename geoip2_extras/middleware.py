@@ -46,13 +46,10 @@ class GeoIP2Middleware:
     """
     Add GeoIP country info to each request.
 
-    This middleware will add a `country` attribute to each request
-    which contains the Django GeoIP2.country() info, along with the
-    source IP address used by the lookup.
-
-    The country is stashed in the session, so the actual database
-    lookup will only occur once per session, or when the IP address
-    changes.
+    This middleware will add a `get_data` attribute to each request
+    which contains the Django GeoIP2 city and / or country info (
+    depends on which geoip2 database is installed). The data is
+    cached against the IP address.
 
     """
 
