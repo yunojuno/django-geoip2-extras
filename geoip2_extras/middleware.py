@@ -1,30 +1,35 @@
 import logging
 
-from geoip2.errors import AddressNotFoundError
-
+from django.conf import settings
 from django.contrib.gis.geoip2 import GeoIP2, GeoIP2Exception
 from django.core.exceptions import MiddlewareNotUsed
+from geoip2.errors import AddressNotFoundError
 
 logger = logging.getLogger(__name__)
 
 
 class GeoData(object):
-
     """Container for GeoIP2 return data."""
 
-    UNKNOWN_COUNTRY_CODE = 'XX'
-    UNKNOWN_COUNTRY_NAME = 'unknown'
+    UNKNOWN_COUNTRY_CODE = "XX"
+    UNKNOWN_COUNTRY_NAME = "unknown"
 
     def __init__(self, ip_address, **geoip_data):
         self.ip_address = ip_address
-        self.city = geoip_data.get('city')
-        self.country_code = geoip_data.get('country_code')
-        self.country_name = geoip_data.get('country_name')
-        self.dma_code = geoip_data.get('dma_code')
-        self.latitude = geoip_data.get('latitude')
-        self.longitude = geoip_data.get('longitude')
-        self.postal_code = geoip_data.get('postal_code')
-        self.region = geoip_data.get('region')
+        self.city = geoip_data.get("city", "")
+        self.country_code = geoip_data.get("country_code", "")
+        self.country_name = geoip_data.get("country_name", "")
+        self.dma_code = geoip_data.get("dma_code", "")
+        self.latitude = geoip_data.get("latitude", "")
+        self.longitude = geoip_data.get("longitude", "")
+        self.postal_code = geoip_data.get("postal_code", "")
+        self.region = geoip_data.get("region", "")
+
+    def __str__(self):
+        return f"GeoIP2 data for {self.ip_address}"
+
+    def __repr__(self):
+        return f'<GeoIP2 ip_address="{self.ip_address}">'
 
     @property
     def is_unknown(self):
@@ -36,7 +41,7 @@ class GeoData(object):
         return GeoData(
             ip_address=ip_address,
             country_code=GeoData.UNKNOWN_COUNTRY_CODE,
-            country_name=GeoData.UNKNOWN_COUNTRY_NAME
+            country_name=GeoData.UNKNOWN_COUNTRY_NAME,
         )
 
 
@@ -54,7 +59,8 @@ class GeoIP2Middleware(object):
     changes.
 
     """
-    SESSION_KEY = 'geoip2'
+
+    SESSION_KEY = "geoip2"
 
     def __init__(self, get_response):
         """Check settings to see if middleware is enabled, and try to init GeoIP2."""
@@ -62,8 +68,11 @@ class GeoIP2Middleware(object):
             self.geoip2 = GeoIP2()
         except GeoIP2Exception:
             raise MiddlewareNotUsed("Error loading GeoIP2 data")
-        else:
-            self.get_response = get_response
+        if self.geoip2._city:
+            logger.debug("Found GeoIP2 City database")
+        if self.geoip2._country:
+            logger.debug("Found GeoIP2 Country database")
+        self.get_response = get_response
 
     def __call__(self, request):
         """
@@ -75,12 +84,17 @@ class GeoIP2Middleware(object):
 
         """
         ip_address = self.remote_addr(request)
-        data = request.session.get(GeoIP2Middleware.SESSION_KEY)
-        if data is None:
+        _data = request.session.get(GeoIP2Middleware.SESSION_KEY)
+        if _data is None:
             data = self.get_geo_data(ip_address)
-        elif data.ip_address != ip_address:
+        else:
+            # deserialize from dict stored in session (object not JSON serializable)
+            data = GeoData(**_data)
+
+        if data.ip_address != ip_address:
             data = self.get_geo_data(ip_address)
-        request.session[GeoIP2Middleware.SESSION_KEY] = request.geo_data = data
+        request.geo_data = data
+        request.session[GeoIP2Middleware.SESSION_KEY] = data.__dict__
         response = self.get_response(request)
         response["X-GeoIP-Country-Code"] = data.country_code
         return response
@@ -88,9 +102,9 @@ class GeoIP2Middleware(object):
     def remote_addr(self, request):
         """Return client IP."""
         header = (
-            request.META.get('HTTP_X_FORWARDED_FOR') or
-            request.META.get('REMOTE_ADDR') or
-            '0.0.0.0'
+            request.META.get("HTTP_X_FORWARDED_FOR")
+            or request.META.get("REMOTE_ADDR")
+            or "0.0.0.0"
         )
         # The last IP in the chain is the only one that Heroku can guarantee
         # - prior IPs may be spoofed, but this is the one that connected to
@@ -101,7 +115,7 @@ class GeoIP2Middleware(object):
         # being correct, but we know the last one is the one that connected
         # to Heroku.
         # http://stackoverflow.com/a/37061471/45698
-        return header.split(',')[-1]
+        return header.split(",")[-1]
 
     def get_geo_data(self, ip_address):
         """Return City and / or Country data for an IP address."""

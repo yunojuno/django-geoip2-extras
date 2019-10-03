@@ -4,10 +4,7 @@ import os
 DEBUG = True
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': 'django-geoip2-extras',
-    }
+    "default": {"ENGINE": "django.db.backends.sqlite3", "NAME": "django-geoip2-extras"}
 }
 
 SECRET_KEY = "request_token"
