@@ -84,7 +84,9 @@ class GeoIP2Middleware(object):
         elif data.ip_address != ip_address:
             data = self.get_geo_data(ip_address)
         request.session[GeoIP2Middleware.SESSION_KEY] = request.geo_data = data
-        return self.get_response(request)
+        response = self.get_response(request)
+        response["X-GeoIP-Country-Code"] = data.country_code
+        return response
 
     def remote_addr(self, request):
         """Return client IP."""

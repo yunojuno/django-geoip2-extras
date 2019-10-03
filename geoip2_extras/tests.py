@@ -2,6 +2,7 @@ from unittest import mock
 
 from django.contrib.gis.geoip2 import GeoIP2, GeoIP2Exception
 from django.core.exceptions import MiddlewareNotUsed
+from django.http import HttpRequest, HttpResponse
 from django.test import TestCase, override_settings
 
 from geoip2.database import Reader
@@ -11,6 +12,10 @@ from .middleware import (
     GeoData,
     AddressNotFoundError
 )
+
+
+def get_response(request: HttpRequest) -> HttpResponse:
+    return HttpResponse()
 
 
 class GeoDataTests(TestCase):
@@ -25,13 +30,11 @@ class GeoDataTests(TestCase):
 @override_settings(GEOIP2_MIDDLEWARE_ENABLED=True)
 class GeoIP2MiddlewareTests(TestCase):
 
-    def get_response():
-        pass
 
     # fix for django GeoIP2 bug
     @mock.patch.object(GeoIP2, '_reader', mock.Mock(Reader))
     def setUp(self):
-        self.middleware = GeoIP2Middleware(GeoIP2MiddlewareTests.get_response)
+        self.middleware = GeoIP2Middleware(get_response)
         self.test_ip = '8.8.8.8'
         self.test_country = {
             'country_code': 'GB',
@@ -100,12 +103,13 @@ class GeoIP2MiddlewareTests(TestCase):
     @mock.patch.object(GeoIP2, '_reader', mock.Mock(Reader))
     @mock.patch.object(GeoIP2Middleware, 'country')
     def test_middleware_call(self, mock_country):
-        middleware = GeoIP2Middleware(lambda r: None)
+        middleware = GeoIP2Middleware(get_response)
         request = mock.Mock(META={'REMOTE_ADDR': self.test_ip})
 
         # test: clean session
         request.session = {}
-        middleware(request)
+        response = middleware(request)
+        self.assertTrue("X-GeoIP-Country-Code" in response)
         mock_country.assert_called_with(self.test_ip)
         self.assertEqual(request.geo_data, mock_country.return_value)
         self.assertEqual(request.session[GeoIP2Middleware.SESSION_KEY], mock_country.return_value)
@@ -128,8 +132,8 @@ class GeoIP2MiddlewareTests(TestCase):
 
     @mock.patch('geoip2_extras.middleware.GeoIP2')
     def test_init(self, mock_geo2):
-        middleware = GeoIP2Middleware(GeoIP2MiddlewareTests.get_response)
-        self.assertEqual(middleware.get_response, GeoIP2MiddlewareTests.get_response)
+        middleware = GeoIP2Middleware(get_response)
+        self.assertEqual(middleware.get_response, get_response)
 
         # mock out a GeoIP2 with no _reader set - mimics the case
         # when neither country nor city databases exist.
@@ -137,7 +141,7 @@ class GeoIP2MiddlewareTests(TestCase):
         self.assertRaises(
             MiddlewareNotUsed,
             GeoIP2Middleware,
-            GeoIP2MiddlewareTests.get_response
+            get_response
         )
 
         # now force a known exception in the init
@@ -146,5 +150,5 @@ class GeoIP2MiddlewareTests(TestCase):
         self.assertRaises(
             MiddlewareNotUsed,
             GeoIP2Middleware,
-            GeoIP2MiddlewareTests.get_response
+            get_response
         )
