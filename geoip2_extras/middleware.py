@@ -83,21 +83,26 @@ class GeoIP2Middleware(object):
         client IP has changed.
 
         """
-        ip_address = self.remote_addr(request)
-        _data = request.session.get(GeoIP2Middleware.SESSION_KEY)
-        if _data is None:
-            data = self.get_geo_data(ip_address)
-        else:
-            # deserialize from dict stored in session (object not JSON serializable)
-            data = GeoData(**_data)
+        try:
+            ip_address = self.remote_addr(request)
+            _data = request.session.get(GeoIP2Middleware.SESSION_KEY)
+            if _data is None:
+                data = self.get_geo_data(ip_address)
+            else:
+                # deserialize from dict stored in session (object not JSON serializable)
+                data = GeoData(**_data)
 
-        if data.ip_address != ip_address:
-            data = self.get_geo_data(ip_address)
-        request.geo_data = data
-        request.session[GeoIP2Middleware.SESSION_KEY] = data.__dict__
-        response = self.get_response(request)
-        response["X-GeoIP-Country-Code"] = data.country_code
-        return response
+            if data.ip_address != ip_address:
+                data = self.get_geo_data(ip_address)
+        except:
+            logger.exception("Error fetching GeoData")
+            return self.get_response(request)
+        else:
+            request.geo_data = data
+            request.session[GeoIP2Middleware.SESSION_KEY] = data.__dict__
+            response = self.get_response(request)
+            response["X-GeoIP-Country-Code"] = data.country_code
+            return response
 
     def remote_addr(self, request):
         """Return client IP."""
@@ -115,7 +120,7 @@ class GeoIP2Middleware(object):
         # being correct, but we know the last one is the one that connected
         # to Heroku.
         # http://stackoverflow.com/a/37061471/45698
-        return header.split(",")[-1]
+        return header.split(",")[-1].strip()
 
     def get_geo_data(self, ip_address):
         """Return City and / or Country data for an IP address."""

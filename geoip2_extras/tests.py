@@ -20,7 +20,6 @@ class GeoDataTests(TestCase):
         geo.country_code = GeoData.UNKNOWN_COUNTRY_CODE
         self.assertTrue(geo.is_unknown)
 
-
 @override_settings(GEOIP2_MIDDLEWARE_ENABLED=True)
 class GeoIP2MiddlewareTests(TestCase):
 
@@ -54,6 +53,9 @@ class GeoIP2MiddlewareTests(TestCase):
         self.assertEqual(self.middleware.remote_addr(request), "1.2.3.4")
         request.META["REMOTE_ADDR"] = None
         self.assertEqual(self.middleware.remote_addr(request), "0.0.0.0")
+        # BUG: 09-Oct-19 - spaces are being preserved and GeoIP2 doesn't like them
+        request.META["HTTP_X_FORWARDED_FOR"] = "1.2.3.4, 8.8.8.8"
+        self.assertEqual(self.middleware.remote_addr(request), "8.8.8.8")
 
     @mock.patch.object(GeoIP2Middleware, "_geoip2")
     def test_get_geo_data(self, mock__geoip2):
