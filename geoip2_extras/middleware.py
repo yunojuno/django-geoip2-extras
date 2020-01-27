@@ -111,7 +111,7 @@ class GeoIP2Middleware:
         header = (
             request.META.get("HTTP_X_FORWARDED_FOR")
             or request.META.get("REMOTE_ADDR")
-            or "0.0.0.0"  # noqa: S2014
+            or "0.0.0.0"  # noqa: S104
         )
         # The last IP in the chain is the only one that Heroku can guarantee
         # - prior IPs may be spoofed, but this is the one that connected to
