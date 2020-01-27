@@ -1,8 +1,11 @@
-import logging
+from __future__ import annotations
 
-from django.conf import settings
+import logging
+from typing import Callable, Optional
+
 from django.contrib.gis.geoip2 import GeoIP2, GeoIP2Exception
 from django.core.exceptions import MiddlewareNotUsed
+from django.http import HttpRequest, HttpResponse
 from geoip2.errors import AddressNotFoundError
 
 logger = logging.getLogger(__name__)
@@ -14,7 +17,7 @@ class GeoData(object):
     UNKNOWN_COUNTRY_CODE = "XX"
     UNKNOWN_COUNTRY_NAME = "unknown"
 
-    def __init__(self, ip_address, **geoip_data):
+    def __init__(self, ip_address: str, **geoip_data: str):
         self.ip_address = ip_address
         self.city = geoip_data.get("city", "")
         self.country_code = geoip_data.get("country_code", "")
@@ -25,18 +28,18 @@ class GeoData(object):
         self.postal_code = geoip_data.get("postal_code", "")
         self.region = geoip_data.get("region", "")
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"GeoIP2 data for {self.ip_address}"
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'<GeoIP2 ip_address="{self.ip_address}">'
 
     @property
-    def is_unknown(self):
+    def is_unknown(self) -> bool:
         return self.country_code == GeoData.UNKNOWN_COUNTRY_CODE
 
     @classmethod
-    def unknown_country(cls, ip_address):
+    def unknown_country(cls, ip_address: str) -> GeoData:
         """Return a new GeoData object representing an unknown country."""
         return GeoData(
             ip_address=ip_address,
@@ -45,8 +48,7 @@ class GeoData(object):
         )
 
 
-class GeoIP2Middleware(object):
-
+class GeoIP2Middleware:
     """
     Add GeoIP country info to each request.
 
@@ -62,7 +64,7 @@ class GeoIP2Middleware(object):
 
     SESSION_KEY = "geoip2"
 
-    def __init__(self, get_response):
+    def __init__(self, get_response: Callable) -> None:
         """Check settings to see if middleware is enabled, and try to init GeoIP2."""
         try:
             self.geoip2 = GeoIP2()
@@ -74,7 +76,7 @@ class GeoIP2Middleware(object):
             logger.debug("Found GeoIP2 Country database")
         self.get_response = get_response
 
-    def __call__(self, request):
+    def __call__(self, request: HttpRequest) -> HttpResponse:
         """
         Add country info _before_ view is called.
 
@@ -91,20 +93,20 @@ class GeoIP2Middleware(object):
             else:
                 # deserialize from dict stored in session (object not JSON serializable)
                 data = GeoData(**_data)
-
-            if data.ip_address != ip_address:
+            if data and data.ip_address != ip_address:
                 data = self.get_geo_data(ip_address)
-        except:
+        except Exception:
             logger.exception("Error fetching GeoData")
             return self.get_response(request)
         else:
             request.geo_data = data
             request.session[GeoIP2Middleware.SESSION_KEY] = data.__dict__
             response = self.get_response(request)
-            response["X-GeoIP-Country-Code"] = data.country_code
+            if data:
+                response["X-GeoIP-Country-Code"] = data.country_code
             return response
 
-    def remote_addr(self, request):
+    def remote_addr(self, request: HttpRequest) -> str:
         """Return client IP."""
         header = (
             request.META.get("HTTP_X_FORWARDED_FOR")
@@ -122,19 +124,21 @@ class GeoIP2Middleware(object):
         # http://stackoverflow.com/a/37061471/45698
         return header.split(",")[-1].strip()
 
-    def get_geo_data(self, ip_address):
+    def get_geo_data(self, ip_address: str) -> Optional[GeoData]:
         """Return City and / or Country data for an IP address."""
         return self.city(ip_address) if self.geoip2._city else self.country(ip_address)
 
-    def country(self, ip_address):
+    def country(self, ip_address: str) -> Optional[GeoData]:
         """Return GeoIP2 Country database data."""
         return self._geoip2(ip_address, self.geoip2.country)
 
-    def city(self, ip_address):
+    def city(self, ip_address: str) -> Optional[GeoData]:
         """Return GeoIP2 City database data."""
         return self._geoip2(ip_address, self.geoip2.city)
 
-    def _geoip2(self, ip_address, geo_func):
+    def _geoip2(
+        self, ip_address: str, geo_func: Callable[[str], dict]
+    ) -> Optional[GeoData]:
         """
         Return GeoData object containing info from GeoIP2.
 
@@ -160,3 +164,4 @@ class GeoIP2Middleware(object):
             logger.exception("GeoIP2 exception raised for %s", ip_address)
         except Exception:
             logger.exception("Error raised looking up geoip2 data for %s", ip_address)
+        return None

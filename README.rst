@@ -4,8 +4,7 @@
 .. image:: https://travis-ci.org/yunojuno/django-geoip2-extras.svg
     :target: https://travis-ci.org/yunojuno/django-geoip2-extras
 
-**The master branch of this project is now Python3 only. Python2 support is
-restricted to the python2 branch.**
+**The master branch of this project is now Python 3.7+ and Django 2.2+ only. Legacy Python and Django versions are tagged.**
 
 Django GeoIP2 Extras
 --------------------

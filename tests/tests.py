@@ -5,8 +5,8 @@ from django.core.exceptions import MiddlewareNotUsed
 from django.http import HttpRequest, HttpResponse
 from django.test import TestCase, override_settings
 from geoip2.database import Reader
-
-from .middleware import AddressNotFoundError, GeoData, GeoIP2Middleware
+from geoip2.errors import AddressNotFoundError
+from geoip2_extras.middleware import GeoData, GeoIP2Middleware
 
 
 def get_response(request: HttpRequest) -> HttpResponse:
@@ -19,6 +19,7 @@ class GeoDataTests(TestCase):
         self.assertFalse(geo.is_unknown)
         geo.country_code = GeoData.UNKNOWN_COUNTRY_CODE
         self.assertTrue(geo.is_unknown)
+
 
 @override_settings(GEOIP2_MIDDLEWARE_ENABLED=True)
 class GeoIP2MiddlewareTests(TestCase):

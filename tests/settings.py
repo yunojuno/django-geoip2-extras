@@ -3,11 +3,9 @@ import os
 
 DEBUG = True
 
-DATABASES = {
-    "default": {"ENGINE": "django.db.backends.sqlite3", "NAME": "django-geoip2-extras"}
-}
+DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": ":memory:"}}
 
-SECRET_KEY = "request_token"
+SECRET_KEY = "TOPSECRET"
 
 GEOIP_PATH = os.path.dirname(__file__)
 
