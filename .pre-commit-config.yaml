@@ -29,7 +29,7 @@ repos:
           - id: flake8
             language_version: python3.8
             additional_dependencies: ["flake8-docstrings", "flake8-bandit"]
-            exclude: tests
+            exclude: tests|migrations
 
     # python static type checking
     - repo: https://github.com/pre-commit/mirrors-mypy
