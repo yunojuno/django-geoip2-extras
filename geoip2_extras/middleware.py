@@ -95,7 +95,7 @@ class GeoIP2Middleware:
                 data = GeoData(**_data)
             if data and data.ip_address != ip_address:
                 data = self.get_geo_data(ip_address)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             logger.exception("Error fetching GeoData")
             return self.get_response(request)
         else:
@@ -162,6 +162,6 @@ class GeoIP2Middleware:
             return GeoData.unknown_country(ip_address)
         except GeoIP2Exception:
             logger.exception("GeoIP2 exception raised for %s", ip_address)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             logger.exception("Error raised looking up geoip2 data for %s", ip_address)
         return None
