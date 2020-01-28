@@ -1,13 +1,13 @@
 [tool.poetry]
 name = "django-geoip2-extras"
-version = "1.2.dev0"
+version = "1.2"
 description = "Additional functionality using the GeoIP2 database."
 license = "MIT"
 authors = ["YunoJuno <code@yunojuno.com>"]
 maintainers = ["YunoJuno <code@yunojuno.com>"]
 readme = "README.rst"
-homepage = "https://github.com/yunojuno/poetry-template"
-repository = "https://github.com/yunojuno/poetry-template"
+homepage = "https://github.com/yunojuno/django-geoip2-extras"
+repository = "https://github.com/yunojuno/django-geoip2-extras"
 classifiers = [
     "Environment :: Web Environment",
     "Framework :: Django :: 2.2",
