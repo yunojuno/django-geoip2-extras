@@ -6,6 +6,7 @@ from django.http import HttpRequest, HttpResponse
 from django.test import TestCase, override_settings
 from geoip2.database import Reader
 from geoip2.errors import AddressNotFoundError
+
 from geoip2_extras.middleware import GeoData, GeoIP2Middleware
 
 
