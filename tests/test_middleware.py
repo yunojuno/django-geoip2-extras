@@ -26,7 +26,7 @@ class GeoDataTests(TestCase):
 class GeoIP2MiddlewareTests(TestCase):
 
     # fix for django GeoIP2 bug
-    @mock.patch.object(GeoIP2, "_reader", mock.Mock(Reader))
+    @mock.patch.object(GeoIP2, "__init__", lambda obj: None)
     def setUp(self):
         self.middleware = GeoIP2Middleware(get_response)
         self.test_ip = "8.8.8.8"
@@ -94,7 +94,7 @@ class GeoIP2MiddlewareTests(TestCase):
         self.assertIsNone(self.middleware.city(self.test_ip))
 
     # fix for django GeoIP2 bug
-    @mock.patch.object(GeoIP2, "_reader", mock.Mock(Reader))
+    @mock.patch.object(GeoIP2, "__init__", lambda obj: None)
     @mock.patch.object(GeoIP2Middleware, "country")
     def test_middleware_call(self, mock_country):
         middleware = GeoIP2Middleware(get_response)
