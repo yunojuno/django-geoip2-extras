@@ -68,8 +68,8 @@ class GeoIP2Middleware:
         """Check settings to see if middleware is enabled, and try to init GeoIP2."""
         try:
             self.geoip2 = GeoIP2()
-        except GeoIP2Exception:
-            raise MiddlewareNotUsed("Error loading GeoIP2 data")
+        except GeoIP2Exception as ex:
+            raise MiddlewareNotUsed(f"{ex}")
         if self.geoip2._city:
             logger.debug("Found GeoIP2 City database")
         if self.geoip2._country:
