@@ -82,7 +82,10 @@ class TestGeoIP2Middleware:
     @mock.patch.object(GeoIP2Middleware, "city_or_country")
     @mock.patch.object(GeoIP2Middleware, "cache_get")
     @mock.patch.object(GeoIP2Middleware, "cache_set")
-    def test_geo_data__cached(self, mock_set, mock_get, mock_city_or_country) -> None:
+    @mock.patch.object(GeoIP2Middleware, "__init_geoip2__")
+    def test_geo_data__cached(
+        self, mock_init_geoip, mock_set, mock_get, mock_city_or_country
+    ) -> None:
         middleware = GeoIP2Middleware(lambda r: HttpResponse())
         mock_get.return_value = TEST_CITY_DATA.copy()
         result = middleware.geo_data("1.2.3.4")
@@ -93,7 +96,10 @@ class TestGeoIP2Middleware:
     @mock.patch.object(GeoIP2Middleware, "city_or_country")
     @mock.patch.object(GeoIP2Middleware, "cache_get")
     @mock.patch.object(GeoIP2Middleware, "cache_set")
-    def test_geo_data__uncached(self, mock_set, mock_get, mock_city_or_country) -> None:
+    @mock.patch.object(GeoIP2Middleware, "__init_geoip2__")
+    def test_geo_data__uncached(
+        self, mock_init_geoip, mock_set, mock_get, mock_city_or_country
+    ) -> None:
         middleware = GeoIP2Middleware(lambda r: HttpResponse())
         mock_get.return_value = None
         mock_city_or_country.return_value = TEST_CITY_DATA.copy()
@@ -104,7 +110,10 @@ class TestGeoIP2Middleware:
 
     @mock.patch.object(GeoIP2Middleware, "city_or_country")
     @mock.patch.object(GeoIP2Middleware, "cache_get")
-    def test_geo_data__address_not_found(self, mock_get, mock_city_or_country) -> None:
+    @mock.patch.object(GeoIP2Middleware, "__init_geoip2__")
+    def test_geo_data__address_not_found(
+        self, mock_init_geoip, mock_get, mock_city_or_country
+    ) -> None:
         middleware = GeoIP2Middleware(lambda r: HttpResponse())
         mock_get.return_value = None
         mock_city_or_country.side_effect = AddressNotFoundError()
@@ -112,14 +121,18 @@ class TestGeoIP2Middleware:
 
     @mock.patch.object(GeoIP2Middleware, "city_or_country")
     @mock.patch.object(GeoIP2Middleware, "cache_get")
-    def test_geo_data__geoip2_exception(self, mock_get, mock_city_or_country) -> None:
+    @mock.patch.object(GeoIP2Middleware, "__init_geoip2__")
+    def test_geo_data__geoip2_exception(
+        self, mock_init_geoip, mock_get, mock_city_or_country
+    ) -> None:
         middleware = GeoIP2Middleware(lambda r: HttpResponse())
         mock_get.return_value = None
         mock_city_or_country.side_effect = GeoIP2Exception()
         assert middleware.geo_data("1.2.3.4") == None
 
     @mock.patch.object(GeoIP2Middleware, "geo_data")
-    def test__call__(self, mock_geo_data, rf):
+    @mock.patch.object(GeoIP2Middleware, "__init_geoip2__")
+    def test__call__(self, mock_geoip2, mock_geo_data, rf):
         request = rf.get("/")
         middleware = GeoIP2Middleware(lambda r: HttpResponse())
         mock_geo_data.return_value = TEST_COUNTRY_DATA.copy()
@@ -129,7 +142,8 @@ class TestGeoIP2Middleware:
         assert response.headers["x-geoip2-country-code"] == "US"
         assert response.headers["x-geoip2-country-name"] == "United States"
 
-    def test_cache_set(self):
+    @mock.patch.object(GeoIP2Middleware, "__init_geoip2__")
+    def test_cache_set(self, mock_init_geoip):
         caches["geoip2-extras"].clear()
         middleware = GeoIP2Middleware(lambda r: HttpResponse())
         assert middleware.cache_get("1.2.3.4") is None
