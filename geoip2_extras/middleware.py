@@ -66,31 +66,29 @@ class GeoIP2Middleware:
 
     """
 
-    def __init__(self, get_response: Callable) -> None:
-        """Check settings to see if middleware is enabled, and try to init GeoIP2."""
+    # extracted to facilitate testing
+    def __init_geoip2__(self) -> None:
+        """Initialise GeoIP2, raise MiddlewareNotUsed on error."""
         try:
-            self.cache = caches["geoip2-extras"]
             self.geoip2 = GeoIP2()
-        except InvalidCacheBackendError as ex:
-            raise MiddlewareNotUsed(f"GeoIP2 cache configuration error: {ex}") from ex
         except GeoIP2Exception as ex:
             raise MiddlewareNotUsed(f"GeoError initialising GeoIP2: {ex}") from ex
-        if self.geoip2._city:
-            logger.debug("Found GeoIP2 City database")
-        if self.geoip2._country:
-            logger.debug("Found GeoIP2 Country database")
+
+    # extracted to facilitate testing
+    def __init_cache__(self) -> None:
+        """Initialise cache, raise MiddlewareNotUsed on error."""
+        try:
+            self.cache = caches["geoip2-extras"]
+        except InvalidCacheBackendError as ex:
+            raise MiddlewareNotUsed(f"GeoIP2 - cache configuration error: {ex}") from ex
+
+    def __init__(self, get_response: Callable) -> None:
+        self.__init_cache__()
+        self.__init_geoip2__()
         self.get_response = get_response
 
     def __call__(self, request: HttpRequest) -> HttpResponse:
-        """
-        Add country info _before_ view is called.
-
-        The country info is added to the request header as "X-GeoIP2-FOO"
-        values.
-
-        IP <> GeoIP2 data is cached between requests.
-
-        """
+        """Add GeoIP2 data to both request and response."""
         ip_address = remote_addr(request)
         geo_data = self.geo_data(ip_address)
         annotate_request(request, geo_data)
@@ -110,6 +108,13 @@ class GeoIP2Middleware:
         else:
             self.cache.set(self.cache_key(ip_address), data, GEO_CACHE_TIMEOUT)
 
+    def city_or_country(self, ip_address: str) -> dict:
+        if self.geoip2._city:
+            return self.geoip2.city(ip_address)
+        if self.geoip2._country:
+            return self.geoip2.country(ip_address)
+        raise GeoIP2Exception("GeoIP2 has neither city nor country database")
+
     def geo_data(self, ip_address: str) -> dict | None:
         """
         Return GeoIP2data for an IP address.
@@ -125,26 +130,17 @@ class GeoIP2Middleware:
             logger.debug("GeoIP2 cache HIT for %s", ip_address)
             return data
 
+        logger.debug("GeoIP2 - cache miss for %s", ip_address)
         try:
-            logger.debug("GeoIP2 cache miss for %s", ip_address)
-            data = self._geo_data(ip_address)
+            data = self.city_or_country(ip_address)
         except AddressNotFoundError:
-            logger.debug("GeoIP2 IP address not found: %s", ip_address)
+            logger.debug("GeoIP2 - IP address not found: %s", ip_address)
             data = unknown_address(ip_address)
         except GeoIP2Exception:
-            logger.exception("GeoIP2 exception raised for %s", ip_address)
+            logger.exception("GeoIP2 - exception raised for %s", ip_address)
             return None
+        else:
+            data["remote_addr"] = ip_address
         # we've had to look it up, so cache it
         self.cache_set(ip_address, data)
-        return data
-
-    def _geo_data(self, ip_address: str) -> dict:
-        """Perform the actual GeoIP2 database lookup."""
-        data = {}
-        if self.geoip2._city:
-            data.update(self.geoip2.city(ip_address))
-        if self.geoip2._country:
-            data.update(self.geoip2.country(ip_address))
-        if data:
-            data["remote_addr"] = ip_address
         return data
