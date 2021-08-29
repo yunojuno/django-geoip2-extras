@@ -14,16 +14,24 @@ logger = logging.getLogger(__name__)
 
 GEO_CACHE_TIMEOUT = getattr(settings, "GEOIP2_EXTRAS_GEO_CACHE_TIMEOUT", 3600)
 
+UNKNOWN_COUNTRY = {
+    "country_code": "XX",
+    "country_name": "unknown",
+}
+
 
 def unknown_address(ip_address: str) -> dict:
-    return {"country_code": "XX", "country_name": "unknown", "remote_addr": ip_address}
+    """Return default 'unkown' address dict."""
+    address = UNKNOWN_COUNTRY.copy()
+    address.update({"remote_addr": ip_address})
+    return address
 
 
 def annotate_response(response: HttpResponse, data: GeoIP2) -> None:
     """Add GeoIP2 data to the Response headers."""
     for k, v in data.items():
-        v = "" if v is None else v
-        response.headers[f"X-GeoIP2-{k.title().replace('_','-')}"] = v
+        if v:
+            response[f"X-GeoIP2-{k.title().replace('_','-')}"] = v
 
 
 def remote_addr(request: HttpRequest) -> str:

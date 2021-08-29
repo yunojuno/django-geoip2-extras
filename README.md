@@ -1,5 +1,3 @@
-**The master branch of this project is now Python 3.7+ and Django 3.2+ only. Legacy Python and Django versions are tagged.**
-
 # Django GeoIP2 Extras
 
 Useful extras based on the `django.contrib.gis.geoip2` module, using
@@ -10,6 +8,8 @@ be used to add city, country level information to inbound requests.
 
 ## Requirements
 
+This package requires Django 2.2 or above, and Python 3.7 or above.
+
 This package wraps the existing Django functionality, and as a result
 relies on the same underlying requirements:
 
@@ -18,8 +18,6 @@ relies on the same underlying requirements:
     datasets in binary format (the CSV files will not work!). Grab the
     GeoLite2-Country.mmdb.gz and GeoLite2-City.mmdb.gz files and unzip
     them in a directory corresponding to the GEOIP_PATH setting.
-
-This package requires Django 3.2 or above.
 
 ## Installation
 
@@ -71,24 +69,19 @@ HTTP/1.1 200 OK
 Date: Sun, 29 Aug 2021 15:47:22 GMT
 Server: WSGIServer/0.2 CPython/3.9.4
 Content-Type: text/html
-X-GeoIP2-City:
 X-GeoIP2-Continent-Code: NA
 X-GeoIP2-Continent-Name: North America
 X-GeoIP2-Country-Code: US
 X-GeoIP2-Country-Name: United States
-X-GeoIP2-Dma-Code:
 X-GeoIP2-Is-In-European-Union: False
 X-GeoIP2-Latitude: 37.751
 X-GeoIP2-Longitude: -97.822
-X-GeoIP2-Postal-Code:
-X-GeoIP2-Region:
 X-GeoIP2-Time-Zone: America/Chicago
 X-GeoIP2-Remote-Addr: 142.250.180.3
 Content-Length: 10697
 ```
 
 This is available from your code via the `request.geo_data` dict:
-
 
 ```python
 >>> request.geo_data
@@ -109,7 +102,7 @@ This is available from your code via the `request.geo_data` dict:
 }
 ```
 
-Missing / incomplete data will be and empty string "".
+Missing / incomplete data will **not** be included in the response headers.
 
 If the IP address cannot be found (e.g. '127.0.0.1'), then a default
 'unknown' country is used, with a code of 'XX'.

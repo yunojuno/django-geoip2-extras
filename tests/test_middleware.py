@@ -8,6 +8,7 @@ from django.test import RequestFactory
 from geoip2.errors import AddressNotFoundError
 
 from geoip2_extras.middleware import (
+    UNKNOWN_COUNTRY,
     GeoIP2Middleware,
     annotate_response,
     remote_addr,
@@ -37,10 +38,21 @@ TEST_COUNTRY_DATA = {
 def test_annotate_response() -> None:
     response = HttpResponse()
     data = unknown_address("1.2.3.4")
-    data["foo"] = None
     annotate_response(response, data)
-    assert response.headers["x-geoip2-country-code"] == data["country_code"]
-    assert response.headers["x-geoip2-foo"] == ""
+    assert response["x-geoip2-country-code"] == UNKNOWN_COUNTRY["country_code"]
+    assert response["x-geoip2-country-name"] == UNKNOWN_COUNTRY["country_name"]
+    assert response["x-geoip2-remote-addr"] == "1.2.3.4"
+
+
+@pytest.mark.parametrize(
+    "key,val,in_response",
+    [("foo", None, False), ("foo", "", False), ("foo", "bar", True)],
+)
+def test_annotate_response__empty(key, val, in_response) -> None:
+    """Test that empty fields are not added to response headers."""
+    response = HttpResponse()
+    annotate_response(response, {key: val})
+    assert (f"x-geoip2-{key}" in response) == in_response
 
 
 @pytest.mark.parametrize(
@@ -112,8 +124,8 @@ class TestGeoIP2Middleware:
         response = middleware(request)
         assert request.geo_data["country_code"] == "US"
         assert request.geo_data["country_name"] == "United States"
-        assert response.headers["x-geoip2-country-code"] == "US"
-        assert response.headers["x-geoip2-country-name"] == "United States"
+        assert response["x-geoip2-country-code"] == "US"
+        assert response["x-geoip2-country-name"] == "United States"
 
     def test_cache_set(self):
         caches["geoip2-extras"].clear()

@@ -10,6 +10,9 @@ homepage = "https://github.com/yunojuno/django-geoip2-extras"
 repository = "https://github.com/yunojuno/django-geoip2-extras"
 classifiers = [
     "Environment :: Web Environment",
+    "Framework :: Django :: 2.2",
+    "Framework :: Django :: 3.0",
+    "Framework :: Django :: 3.1",
     "Framework :: Django :: 3.2",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3 :: Only",
@@ -21,7 +24,7 @@ packages = [{ include = "geoip2_extras" }]
 
 [tool.poetry.dependencies]
 python = "^3.7"
-django = "^3.2"
+django = "^2.2 | ^3.0"
 geoip2 = "^3.0.0"
 
 [tool.poetry.dev-dependencies]
