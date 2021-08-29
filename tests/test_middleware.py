@@ -118,38 +118,21 @@ class TestGeoIP2Middleware:
 
     @pytest.mark.parametrize("add_headers", [True, False])
     @mock.patch.object(GeoIP2Middleware, "geo_data")
-    def test__call__false(self, mock_geo_data, add_headers, rf):
-        mock_geo_data.return_value = TEST_COUNTRY_DATA.copy()
-        middleware = GeoIP2Middleware(lambda r: HttpResponse())
-        with mock.patch("geoip2_extras.middleware.ADD_RESPONSE_HEADERS", add_headers):
-            request = rf.get("/")
-            response = middleware(request)
-            assert request.geo_data["country_code"] == "US"
-            assert ("x-geoip2-country-code" in response) == add_headers
-
-    @mock.patch.object(GeoIP2Middleware, "geo_data")
-    def test__call__debug_header(self, mock_geo_data, rf):
+    @mock.patch.object(GeoIP2Middleware, "add_response_headers")
+    def test__call__(self, mock_headers, mock_geo_data, add_headers, rf):
         """Test pre-request response header override header."""
-        mock_geo_data.return_value = TEST_COUNTRY_DATA.copy()
         middleware = GeoIP2Middleware(lambda r: HttpResponse())
-        # overwrite setting with custom request header
-        with mock.patch("geoip2_extras.middleware.ADD_RESPONSE_HEADERS", False):
-            request = rf.get("/", HTTP_X_GEOIP2_DEBUG=True)
-            response = middleware(request)
-            assert request.geo_data["country_code"] == TEST_COUNTRY_DATA["country_code"]
-            assert request.geo_data["country_code"] == response["x-geoip2-country-code"]
-
-    @mock.patch.object(GeoIP2Middleware, "geo_data")
-    def test__call__debug_qs(self, mock_geo_data, rf):
-        """Test pre-request response header override querystring."""
         mock_geo_data.return_value = TEST_COUNTRY_DATA.copy()
-        middleware = GeoIP2Middleware(lambda r: HttpResponse())
-        # overwrite setting with querystring param
-        with mock.patch("geoip2_extras.middleware.ADD_RESPONSE_HEADERS", False):
-            request = rf.get("/?geoip2=1")
-            response = middleware(request)
-            assert request.geo_data["country_code"] == TEST_COUNTRY_DATA["country_code"]
-            assert request.geo_data["country_code"] == response["x-geoip2-country-code"]
+        mock_headers.return_value = add_headers
+        request = rf.get("/")
+        response = middleware(request)
+        assert request.geo_data["country_code"] == TEST_COUNTRY_DATA["country_code"]
+        if add_headers:
+            assert (
+                response["x-geoip2-country-code"] == TEST_COUNTRY_DATA["country_code"]
+            )
+        else:
+            assert "x-geoip2-country-code" not in response
 
     def test_cache_set(self):
         caches["geoip2-extras"].clear()
