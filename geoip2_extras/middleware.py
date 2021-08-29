@@ -3,16 +3,15 @@ from __future__ import annotations
 import logging
 from typing import Callable
 
-from django.conf import settings
 from django.contrib.gis.geoip2 import GeoIP2, GeoIP2Exception
 from django.core.cache import InvalidCacheBackendError, caches
 from django.core.exceptions import MiddlewareNotUsed
 from django.http import HttpRequest, HttpResponse
 from geoip2.errors import AddressNotFoundError
 
-logger = logging.getLogger(__name__)
+from .settings import ADD_RESPONSE_HEADERS, CACHE_TIMEOUT
 
-GEO_CACHE_TIMEOUT = getattr(settings, "GEOIP2_EXTRAS_GEO_CACHE_TIMEOUT", 3600)
+logger = logging.getLogger(__name__)
 
 UNKNOWN_COUNTRY = {
     "country_code": "XX",
@@ -92,8 +91,24 @@ class GeoIP2Middleware:
         ip_address = remote_addr(request)
         request.geo_data = self.geo_data(ip_address)
         response = self.get_response(request)
-        annotate_response(response, request.geo_data)
+        if self.add_response_headers(request):
+            annotate_response(response, request.geo_data)
         return response
+
+    def add_response_headers(self, request: HttpRequest) -> bool:
+        """
+        Return True if we should add the response headers.
+
+        This function enables users to force the response headers by adding
+        a request header `X-GeoIP2-Debug`.
+        """
+        if ADD_RESPONSE_HEADERS:
+            return True
+        if request.headers.get("X-GeoIP2-Debug", False):
+            return True
+        if request.GET.get("geoip2", False):
+            return True
+        return False
 
     def cache_key(self, ip_address: str) -> str:
         return f"geoip2-extras::{ip_address}"
@@ -105,7 +120,7 @@ class GeoIP2Middleware:
         if not data:
             self.cache.delete(self.cache_key(ip_address))
         else:
-            self.cache.set(self.cache_key(ip_address), data, GEO_CACHE_TIMEOUT)
+            self.cache.set(self.cache_key(ip_address), data, CACHE_TIMEOUT)
 
     def city_or_country(self, ip_address: str) -> dict:
         if self.geoip2._city:

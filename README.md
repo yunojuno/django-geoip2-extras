@@ -19,6 +19,9 @@ relies on the same underlying requirements:
     GeoLite2-Country.mmdb.gz and GeoLite2-City.mmdb.gz files and unzip
     them in a directory corresponding to the GEOIP_PATH setting.
 
+NB The MaxMind database is not included with this package. It is your
+responsiblity to download this and include it as part of your project.
+
 ## Installation
 
 This package can be installed from PyPI as `django-geoip2-extras`:
@@ -46,42 +49,26 @@ default `GEOIP_PATH` - this is the default Django GeoIP2 behaviour:
 GEOIP_PATH = os.path.dirname(__file__)
 ```
 
-NB Loading this package does *not* install the (MaxMind
-database)[http://dev.maxmind.com/geoip/geoip2/geolite2/]. That is your
-responsibility. The Country database is 2.7MB, and could be added to
-most project comfortably, but it is updated regularly, and keeping that
-up-to-date is out of scope for this project. The City database is 27MB,
-and is probably not suitable for adding to source control. There are
-various solutions out on the web for pulling in the City database as
-part of a CD process.
+### Settings
+
+The following settings can be overridden in `django.conf.settings`.
+
+* `GEOIP2_EXTRAS_CACHE_TIMEOUT`
+
+Time to cache IP <> address data in seconds - default to 1hr (3600s)
+
+* `GEOIP2_EXTRAS_ADD_RESPONSE_HEADERS`
+
+Set to True to write out the GeoIP data to the response headers. Defaults to use
+the `DEBUG` value. This value can be overridden on a per-request basis by adding
+the `X-GeoIP2-Debug` request header, or adding `geoip2=1` to the request
+querystring. This is useful for debugging in a production environment where you
+may not be adding the response headers by default.
 
 ## Usage
 
 Once the middleware is added, you will be able to access City and / or
-Country level information on the request object via the `geo_data` dict,
-and the same information will be added to the HttpResponse headers.
-
-The raw data is added to the response headers thus:
-
-```
-$ curl -I -H "x-forwarded-for: 142.250.180.3" localhost:8000
-HTTP/1.1 200 OK
-Date: Sun, 29 Aug 2021 15:47:22 GMT
-Server: WSGIServer/0.2 CPython/3.9.4
-Content-Type: text/html
-X-GeoIP2-Continent-Code: NA
-X-GeoIP2-Continent-Name: North America
-X-GeoIP2-Country-Code: US
-X-GeoIP2-Country-Name: United States
-X-GeoIP2-Is-In-European-Union: False
-X-GeoIP2-Latitude: 37.751
-X-GeoIP2-Longitude: -97.822
-X-GeoIP2-Time-Zone: America/Chicago
-X-GeoIP2-Remote-Addr: 142.250.180.3
-Content-Length: 10697
-```
-
-This is available from your code via the `request.geo_data` dict:
+Country level information on the request object via the `geo_data` dict:
 
 ```python
 >>> request.geo_data
@@ -102,10 +89,45 @@ This is available from your code via the `request.geo_data` dict:
 }
 ```
 
-Missing / incomplete data will **not** be included in the response headers.
+The same information will be added to the HttpResponse headers if
+`GEOIP2_EXTRAS_ADD_RESPONSE_HEADERS` is True. Values are set using the
+`X-GeoIP2-` prefix.
+
+NB blank (`""`) values are **not** added to the response:
+
+```shell
+# use the google.co.uk IP
+$ curl -I -H "x-forwarded-for: 142.250.180.3" localhost:8000
+HTTP/1.1 200 OK
+Date: Sun, 29 Aug 2021 15:47:22 GMT
+Server: WSGIServer/0.2 CPython/3.9.4
+Content-Type: text/html
+X-GeoIP2-Continent-Code: NA
+X-GeoIP2-Continent-Name: North America
+X-GeoIP2-Country-Code: US
+X-GeoIP2-Country-Name: United States
+X-GeoIP2-Is-In-European-Union: False
+X-GeoIP2-Latitude: 37.751
+X-GeoIP2-Longitude: -97.822
+X-GeoIP2-Time-Zone: America/Chicago
+X-GeoIP2-Remote-Addr: 142.250.180.3
+Content-Length: 10697
+```
 
 If the IP address cannot be found (e.g. '127.0.0.1'), then a default
 'unknown' country is used, with a code of 'XX'.
+
+```shell
+$ curl -I -H "x-forwarded-for: 127.0.0.1" localhost:8000
+HTTP/1.1 200 OK
+Date: Sun, 29 Aug 2021 15:47:22 GMT
+Server: WSGIServer/0.2 CPython/3.9.4
+Content-Type: text/html
+X-GeoIP2-Country-Code: XX
+X-GeoIP2-Country-Name: unknown
+X-GeoIP2-Remote-Addr: 127.0.0.1
+Content-Length: 10697
+```
 
 ## Tests
 
