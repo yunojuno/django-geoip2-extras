@@ -23,13 +23,15 @@ def annotate_request(request: HttpRequest, data: GeoIP2) -> None:
     """Add GeoIP2 data to the Request headers."""
     for k, v in data.items():
         # request.headers is immutable, so we have to go in via META
-        request.META[f"HTTP_X_GEOIP2_{k.upper().replace('-','_')}"] = v or ""
+        v = "" if v is None else v
+        request.META[f"HTTP_X_GEOIP2_{k.upper().replace('-','_')}"] = v
 
 
 def annotate_response(response: HttpResponse, data: GeoIP2) -> None:
     """Add GeoIP2 data to the Response headers."""
     for k, v in data.items():
-        response.headers[f"X-GeoIP2-{k.title().replace('_','-')}"] = v or ""
+        v = "" if v is None else v
+        response.headers[f"X-GeoIP2-{k.title().replace('_','-')}"] = v
 
 
 def remote_addr(request: HttpRequest) -> str:
@@ -96,6 +98,18 @@ class GeoIP2Middleware:
         annotate_response(response, geo_data)
         return response
 
+    def cache_key(self, ip_address: str) -> str:
+        return f"geoip2-extras::{ip_address}"
+
+    def cache_get(self, ip_address: str) -> dict | None:
+        return self.cache.get(self.cache_key(ip_address))
+
+    def cache_set(self, ip_address: str, data: dict | None) -> None:
+        if not data:
+            self.cache.delete(self.cache_key(ip_address))
+        else:
+            self.cache.set(self.cache_key(ip_address), data, GEO_CACHE_TIMEOUT)
+
     def geo_data(self, ip_address: str) -> dict | None:
         """
         Return GeoIP2data for an IP address.
@@ -106,7 +120,7 @@ class GeoIP2Middleware:
         next request.
 
         """
-        data = self.cache.get(ip_address)
+        data = self.cache_get(ip_address)
         if data is not None:
             logger.debug("GeoIP2 cache HIT for %s", ip_address)
             return data
@@ -121,14 +135,16 @@ class GeoIP2Middleware:
             logger.exception("GeoIP2 exception raised for %s", ip_address)
             return None
         # we've had to look it up, so cache it
-        self.cache.set(ip_address, data, GEO_CACHE_TIMEOUT)
+        self.cache_set(ip_address, data)
         return data
 
     def _geo_data(self, ip_address: str) -> dict:
         """Perform the actual GeoIP2 database lookup."""
+        data = {}
         if self.geoip2._city:
-            data = self.geoip2.city(ip_address)
-        else:
-            data = self.geoip2.country(ip_address)
-        data["remote_addr"] = ip_address
+            data.update(self.geoip2.city(ip_address))
+        if self.geoip2._country:
+            data.update(self.geoip2.country(ip_address))
+        if data:
+            data["remote_addr"] = ip_address
         return data
