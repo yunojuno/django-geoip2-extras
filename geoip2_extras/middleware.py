@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Callable, Optional
+from typing import Callable
 
 from django.contrib.gis.geoip2 import GeoIP2, GeoIP2Exception
 from django.core.exceptions import MiddlewareNotUsed
@@ -69,7 +69,7 @@ class GeoIP2Middleware:
         try:
             self.geoip2 = GeoIP2()
         except GeoIP2Exception as ex:
-            raise MiddlewareNotUsed(f"{ex}")
+            raise MiddlewareNotUsed(f"Error initialising GeoIP2: {ex}") from ex
         if self.geoip2._city:
             logger.debug("Found GeoIP2 City database")
         if self.geoip2._country:
@@ -95,7 +95,7 @@ class GeoIP2Middleware:
                 data = GeoData(**_data)
             if data and data.ip_address != ip_address:
                 data = self.get_geo_data(ip_address)
-        except Exception:  # pylint: disable=broad-except
+        except Exception:  # noqa: B902
             logger.exception("Error fetching GeoData")
             return self.get_response(request)
         else:
@@ -124,21 +124,21 @@ class GeoIP2Middleware:
         # http://stackoverflow.com/a/37061471/45698
         return header.split(",")[-1].strip()
 
-    def get_geo_data(self, ip_address: str) -> Optional[GeoData]:
+    def get_geo_data(self, ip_address: str) -> GeoData | None:
         """Return City and / or Country data for an IP address."""
         return self.city(ip_address) if self.geoip2._city else self.country(ip_address)
 
-    def country(self, ip_address: str) -> Optional[GeoData]:
+    def country(self, ip_address: str) -> GeoData | None:
         """Return GeoIP2 Country database data."""
         return self._geoip2(ip_address, self.geoip2.country)
 
-    def city(self, ip_address: str) -> Optional[GeoData]:
+    def city(self, ip_address: str) -> GeoData | None:
         """Return GeoIP2 City database data."""
         return self._geoip2(ip_address, self.geoip2.city)
 
     def _geoip2(
         self, ip_address: str, geo_func: Callable[[str], dict]
-    ) -> Optional[GeoData]:
+    ) -> GeoData | None:
         """
         Return GeoData object containing info from GeoIP2.
 
@@ -162,6 +162,6 @@ class GeoIP2Middleware:
             return GeoData.unknown_country(ip_address)
         except GeoIP2Exception:
             logger.exception("GeoIP2 exception raised for %s", ip_address)
-        except Exception:  # pylint: disable=broad-except
+        except Exception:  # noqa: B902
             logger.exception("Error raised looking up geoip2 data for %s", ip_address)
         return None
