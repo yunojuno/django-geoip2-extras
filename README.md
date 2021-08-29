@@ -86,18 +86,19 @@ X-GeoIP2-Remote-Addr: 142.250.180.3
 Content-Length: 10697
 ```
 
-This is available from your code via the `request.headers` object:
+This is available from your code via the `request.headers` object (the
+keys are case insensitive):
 
 ```python
 >>> request.headers["x-geoip2-city"]
 'Beverley Hills'
->>> request.headers["x-geoip2-postal_code"]
+>>> request.headers["x-geoip2-postal-code"]
 '90210'
 >>> request.headers["x-geoip2-region"]
 'California'
->>> request.headers["x-geoip2-country_code"]
+>>> request.headers["x-geoip2-country-code"]
 'US'
->>> request.headers["x-geoip2-country_name"]
+>>> request.headers["x-geoip2-country-name"]
 'United States'
 >>> request.headers["x-geoip2-latitude"]
 '34.0736'
@@ -107,8 +108,8 @@ This is available from your code via the `request.headers` object:
 
 Missing / incomplete data will be and empty string "".
 
-If the IP address cannot be found (e.g. '127.0.0.1'), then a default 'unknown'
-country is used, with a code of 'XX':
+If the IP address cannot be found (e.g. '127.0.0.1'), then a default
+'unknown' country is used, with a code of 'XX'.
 
 ## Tests
 
