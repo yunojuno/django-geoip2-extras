@@ -49,6 +49,16 @@ TEMPLATES = [
     }
 ]
 
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+    },
+    "geoip2-extras": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "some-random-string-key",
+    },
+}
+
 STATIC_URL = "/static/"
 
 SECRET_KEY = "secret"
@@ -83,7 +93,7 @@ ROOT_URLCONF = "tests.urls"
 
 # Uncomment this, and add the GeoIP2-City.mmdb and GeoIP2-Country.mmdb databases
 # to the /tests directory.
-# GEOIP_PATH = PROJECT_DIR
+GEOIP_PATH = PROJECT_DIR
 
 if not DEBUG:
     raise Exception("This settings file can only be used with DEBUG=True")
