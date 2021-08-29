@@ -19,14 +19,6 @@ def unknown_address(ip_address: str) -> dict:
     return {"country_code": "XX", "country_name": "unknown", "remote_addr": ip_address}
 
 
-def annotate_request(request: HttpRequest, data: GeoIP2) -> None:
-    """Add GeoIP2 data to the Request headers."""
-    for k, v in data.items():
-        # request.headers is immutable, so we have to go in via META
-        v = "" if v is None else v
-        request.META[f"HTTP_X_GEOIP2_{k.upper().replace('-','_')}"] = v
-
-
 def annotate_response(response: HttpResponse, data: GeoIP2) -> None:
     """Add GeoIP2 data to the Response headers."""
     for k, v in data.items():
@@ -90,10 +82,9 @@ class GeoIP2Middleware:
     def __call__(self, request: HttpRequest) -> HttpResponse:
         """Add GeoIP2 data to both request and response."""
         ip_address = remote_addr(request)
-        geo_data = self.geo_data(ip_address)
-        annotate_request(request, geo_data)
+        request.geo_data = self.geo_data(ip_address)
         response = self.get_response(request)
-        annotate_response(response, geo_data)
+        annotate_response(response, request.geo_data)
         return response
 
     def cache_key(self, ip_address: str) -> str:

@@ -1,15 +1,14 @@
 from unittest import mock
 
 import pytest
-from django.contrib.gis.geoip2 import GeoIP2, GeoIP2Exception
+from django.contrib.gis.geoip2 import GeoIP2Exception
 from django.core.cache import caches
-from django.http import HttpRequest, HttpResponse
-from django.test import RequestFactory, client
+from django.http import HttpResponse
+from django.test import RequestFactory
 from geoip2.errors import AddressNotFoundError
 
 from geoip2_extras.middleware import (
     GeoIP2Middleware,
-    annotate_request,
     annotate_response,
     remote_addr,
     unknown_address,
@@ -35,19 +34,6 @@ TEST_COUNTRY_DATA = {
 }
 
 
-# from geoip2_extras.middleware import GeoIP2Middleware
-def test_annotate_request(rf: RequestFactory) -> None:
-    request = rf.get("/")
-    data = unknown_address("1.2.3.4")
-    data["foo"] = None
-    annotate_request(request, data)
-    assert request.META["HTTP_X_GEOIP2_COUNTRY_CODE"] == data["country_code"]
-    assert request.headers["x-geoip2-country-code"] == data["country_code"]
-    assert request.META["HTTP_X_GEOIP2_FOO"] == ""
-    assert request.headers["x-geoip2-foo"] == ""
-
-
-# from geoip2_extras.middleware import GeoIP2Middleware
 def test_annotate_response() -> None:
     response = HttpResponse()
     data = unknown_address("1.2.3.4")
@@ -124,8 +110,8 @@ class TestGeoIP2Middleware:
         middleware = GeoIP2Middleware(lambda r: HttpResponse())
         mock_geo_data.return_value = TEST_COUNTRY_DATA.copy()
         response = middleware(request)
-        assert request.headers["x-geoip2-country-code"] == "US"
-        assert request.headers["x-geoip2-country-name"] == "United States"
+        assert request.geo_data["country_code"] == "US"
+        assert request.geo_data["country_name"] == "United States"
         assert response.headers["x-geoip2-country-code"] == "US"
         assert response.headers["x-geoip2-country-name"] == "United States"
 
