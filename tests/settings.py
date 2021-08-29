@@ -94,6 +94,9 @@ ROOT_URLCONF = "tests.urls"
 # Uncomment this, and add the GeoIP2-City.mmdb and GeoIP2-Country.mmdb databases
 # to the /tests directory.
 GEOIP_PATH = PROJECT_DIR
+# Test database downloaded from MaxMind's GH repo
+# https://github.com/maxmind/MaxMind-DB/tree/main/test-data
+GEOIP_COUNTRY = "GeoLite2-Country-Test.mmdb"
 
 if not DEBUG:
     raise Exception("This settings file can only be used with DEBUG=True")
