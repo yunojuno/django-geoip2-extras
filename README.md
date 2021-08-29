@@ -60,9 +60,10 @@ part of a CD process.
 ## Usage
 
 Once the middleware is added, you will be able to access City and / or
-Country level information on the request object.
+Country level information on the request object via the `geo_data` dict,
+and the same information will be added to the HttpResponse headers.
 
-The raw data is added to the request and response headers:
+The raw data is added to the response headers thus:
 
 ```
 $ curl -I -H "x-forwarded-for: 142.250.180.3" localhost:8000
@@ -86,24 +87,26 @@ X-GeoIP2-Remote-Addr: 142.250.180.3
 Content-Length: 10697
 ```
 
-This is available from your code via the `request.headers` object (the
-keys are case insensitive):
+This is available from your code via the `request.geo_data` dict:
+
 
 ```python
->>> request.headers["x-geoip2-city"]
-'Beverley Hills'
->>> request.headers["x-geoip2-postal-code"]
-'90210'
->>> request.headers["x-geoip2-region"]
-'California'
->>> request.headers["x-geoip2-country-code"]
-'US'
->>> request.headers["x-geoip2-country-name"]
-'United States'
->>> request.headers["x-geoip2-latitude"]
-'34.0736'
->>> request.headers["x-geoip2-longitude"]
-'118.4004'
+>>> request.geo_data
+{
+    "city": ""
+    "continent-code": "NA"
+    "continent-name": "North America"
+    "country-code": "US"
+    "country-name": "United States"
+    "dma-code": ""
+    "is-in-european-union": False
+    "latitude": 37.751
+    "longitude": -97.822
+    "postal-code": ""
+    "region": ""
+    "time-zone": "America/Chicago"
+    "remote-addr": "142.250.180.3"
+}
 ```
 
 Missing / incomplete data will be and empty string "".
