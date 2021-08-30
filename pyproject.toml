@@ -1,11 +1,11 @@
 [tool.poetry]
 name = "django-geoip2-extras"
-version = "1.3"
+version = "2.0.beta4"
 description = "Additional functionality using the GeoIP2 database."
 license = "MIT"
 authors = ["YunoJuno <code@yunojuno.com>"]
 maintainers = ["YunoJuno <code@yunojuno.com>"]
-readme = "README.rst"
+readme = "README.md"
 homepage = "https://github.com/yunojuno/django-geoip2-extras"
 repository = "https://github.com/yunojuno/django-geoip2-extras"
 classifiers = [
@@ -24,8 +24,7 @@ packages = [{ include = "geoip2_extras" }]
 
 [tool.poetry.dependencies]
 python = "^3.7"
-django = "^2.2 || ^3.0"
-python-env-utils = "*"
+django = "^2.2 | ^3.0"
 geoip2 = "^3.0.0"
 
 [tool.poetry.dev-dependencies]
