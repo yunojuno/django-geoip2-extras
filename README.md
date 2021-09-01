@@ -60,6 +60,8 @@ CACHES = {
 }
 ```
 
+Tip: see `/demo/settings.py` for a full working example.
+
 ### Settings
 
 The following settings can be overridden in `django.conf.settings`.

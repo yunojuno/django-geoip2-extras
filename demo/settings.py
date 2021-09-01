@@ -1,16 +1,16 @@
-from distutils.version import StrictVersion
 from os import path
-
-import django
-
-DJANGO_VERSION = StrictVersion(django.get_version())
 
 DEBUG = True
 TEMPLATE_DEBUG = True
 USE_TZ = True
 USE_L10N = True
 
-DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": "demo.db"}}
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": "demo.db",
+    }
+}
 
 INSTALLED_APPS = (
     "django.contrib.admin",
@@ -36,6 +36,7 @@ CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
     },
+    # required in order for IP addresses to be cached
     "geoip2-extras": {
         "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
     },
@@ -60,12 +61,14 @@ TEMPLATES = [
 
 STATIC_URL = "/static/"
 
-SECRET_KEY = "secret"  # noqa: S105
+SECRET_KEY = "top-secret"  # noqa: S105
 
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
-    "formatters": {"simple": {"format": "%(levelname)s %(message)s"}},
+    "formatters": {
+        "simple": {"format": "%(levelname)s %(message)s"},
+    },
     "handlers": {
         "console": {
             "level": "DEBUG",
@@ -74,10 +77,20 @@ LOGGING = {
         }
     },
     "loggers": {
-        "": {"handlers": ["console"], "propagate": True, "level": "DEBUG"},
+        "": {
+            "handlers": ["console"],
+            "propagate": True,
+            "level": "DEBUG",
+        },
+        # required to output MiddlewareNotUsed logging
+        "django.request": {
+            "handlers": ["console"],
+            "propagate": True,
+            "level": "DEBUG",
+        },
         "geoip2_extras": {
             "handlers": ["console"],
-            "propagate": False,
+            "propagate": True,
             "level": "DEBUG",
         },
     },
@@ -93,6 +106,8 @@ if not DEBUG:
 # Uncomment this, and add the GeoIP2-City.mmdb and GeoIP2-Country.mmdb databases
 # to the /tests directory.
 GEOIP_PATH = PROJECT_DIR
-# Test database downloaded from MaxMind's GH repo
+
+# Test database downloaded from MaxMind's GH repo copy over from
+# /tests/ if you want to run the demo locally.
 # https://github.com/maxmind/MaxMind-DB/tree/main/test-data
 GEOIP_COUNTRY = "GeoLite2-Country-Test.mmdb"

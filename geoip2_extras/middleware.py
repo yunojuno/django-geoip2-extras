@@ -70,6 +70,7 @@ class GeoIP2Middleware:
         """Initialise GeoIP2, raise MiddlewareNotUsed on error."""
         try:
             self.geoip2 = GeoIP2()
+            logging.info("GeoIP2 - successfully initialised database reader")
         except GeoIP2Exception as ex:
             raise MiddlewareNotUsed(f"GeoError initialising GeoIP2: {ex}") from ex
 
@@ -78,6 +79,7 @@ class GeoIP2Middleware:
         """Initialise cache, raise MiddlewareNotUsed on error."""
         try:
             self.cache = caches["geoip2-extras"]
+            logging.info("GeoIP2 - successfully initialised local cache")
         except InvalidCacheBackendError as ex:
             raise MiddlewareNotUsed(f"GeoIP2 - cache configuration error: {ex}") from ex
 
