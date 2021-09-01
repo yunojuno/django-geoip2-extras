@@ -49,6 +49,17 @@ default `GEOIP_PATH` - this is the default Django GeoIP2 behaviour:
 GEOIP_PATH = os.path.dirname(__file__)
 ```
 
+You must also configure a cache called `geoip2-extras`:
+
+```python
+# settings
+CACHES = {
+    "default": { ... },
+    "geoip2-extras": { ... },
+    ...
+}
+```
+
 ### Settings
 
 The following settings can be overridden in `django.conf.settings`.
