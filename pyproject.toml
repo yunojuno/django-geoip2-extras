@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "django-geoip2-extras"
-version = "2.0"
+version = "2.0.1"
 description = "Additional functionality using the GeoIP2 database."
 license = "MIT"
 authors = ["YunoJuno <code@yunojuno.com>"]
