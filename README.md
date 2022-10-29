@@ -5,6 +5,9 @@ the [MaxMind GeoIP2 Lite](http://dev.maxmind.com/geoip/geoip2/geolite2/) databas
 
 The first feature in this package is a Django middleware class that can
 be used to add city, country level information to inbound requests.
+### Version support
+
+The current version of the this app support **Python 3.8+** and **Django 3.2+**
 
 ## Requirements
 

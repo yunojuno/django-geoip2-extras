@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "django-geoip2-extras"
-version = "2.0.2"
+version = "3.0"
 description = "Additional functionality using the GeoIP2 database."
 license = "MIT"
 authors = ["YunoJuno <code@yunojuno.com>"]
@@ -23,12 +23,12 @@ classifiers = [
 packages = [{ include = "geoip2_extras" }]
 
 [tool.poetry.dependencies]
-python = "^3.7"
-django = "^2.2 || ^3.0 || ^4.0"
+python = "^3.8"
+django = "^3.2 || ^4.0"
 geoip2 = "^3.0.0"
 
 [tool.poetry.dev-dependencies]
-black = { version="*", allow-prereleases=true }
+black = "*"
 coverage = "*"
 flake8 = "*"
 flake8-bandit = "*"
