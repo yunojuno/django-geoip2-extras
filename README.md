@@ -5,15 +5,14 @@ the [MaxMind GeoIP2 Lite](http://dev.maxmind.com/geoip/geoip2/geolite2/) databas
 
 The first feature in this package is a Django middleware class that can
 be used to add city, country level information to inbound requests.
+
 ### Version support
 
 The current version of the this app support **Python 3.8+** and **Django 3.2+**
 
 ## Requirements
 
-This package requires Django 2.2 or above, and Python 3.7 or above.
-
-This package wraps the existing Django functionality, and as a result
+1) This package wraps the existing Django functionality, and as a result
 relies on the same underlying requirements:
 
     In order to perform IP-based geolocation, the GeoIP2 object
@@ -22,8 +21,12 @@ relies on the same underlying requirements:
     GeoLite2-Country.mmdb.gz and GeoLite2-City.mmdb.gz files and unzip
     them in a directory corresponding to the GEOIP_PATH setting.
 
-NB The MaxMind database is not included with this package. It is your
+NB: The MaxMind database is not included with this package. It is your
 responsiblity to download this and include it as part of your project.
+
+2) This package requires the usage of a Django cache configuration to
+maintain adaquate performance.
+
 
 ## Installation
 
@@ -52,22 +55,33 @@ default `GEOIP_PATH` - this is the default Django GeoIP2 behaviour:
 GEOIP_PATH = os.path.dirname(__file__)
 ```
 
-You must also configure a cache called `geoip2-extras`:
+You must also configure a cache to use  via `GEOIP2_EXTRAS_CACHE_NAME`.
+The value should match the name of the Django cache configuration you
+wish to use for caching.
 
 ```python
-# settings
+# settings.py
+
+# Django cache configuration setting
 CACHES = {
     "default": { ... },
-    "geoip2-extras": { ... },
+    "some-other-cache": { ... },  # <-- it would use this one.
     ...
 }
+
+# Set this to specific configuration name from CACHES
+GEOIP2_EXTRAS_CACHE_NAME = "some-other-cache"
 ```
 
 Tip: see `/demo/settings.py` for a full working example.
 
 ### Settings
 
-The following settings can be overridden in `django.conf.settings`.
+The following settings can be overridden via your Django settings:
+
+* `GEOIP2_EXTRAS_CACHE_NAME`
+
+The Django cache configuration to use for cacheing.
 
 * `GEOIP2_EXTRAS_CACHE_TIMEOUT`
 

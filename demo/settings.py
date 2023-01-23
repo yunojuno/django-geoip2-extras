@@ -36,7 +36,6 @@ CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
     },
-    # required in order for IP addresses to be cached
     "geoip2-extras": {
         "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
     },
@@ -111,3 +110,6 @@ GEOIP_PATH = PROJECT_DIR
 # /tests/ if you want to run the demo locally.
 # https://github.com/maxmind/MaxMind-DB/tree/main/test-data
 GEOIP_COUNTRY = "GeoLite2-Country-Test.mmdb"
+
+# Tell the library which Django cache configuration to use.
+GEOIP2_EXTRAS_CACHE_NAME = "geoip2-extras"

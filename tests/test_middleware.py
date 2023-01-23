@@ -7,6 +7,7 @@ from django.http import HttpResponse
 from django.test import RequestFactory
 from geoip2.errors import AddressNotFoundError
 
+from geoip2_extras import settings
 from geoip2_extras.middleware import (
     UNKNOWN_COUNTRY,
     GeoIP2Middleware,
@@ -114,7 +115,7 @@ class TestGeoIP2Middleware:
         middleware = GeoIP2Middleware(lambda r: HttpResponse())
         mock_get.return_value = None
         mock_city_or_country.side_effect = GeoIP2Exception()
-        assert middleware.geo_data("1.2.3.4") == None
+        assert middleware.geo_data("1.2.3.4") is None
 
     @pytest.mark.parametrize("add_headers", [True, False])
     @mock.patch.object(GeoIP2Middleware, "geo_data")
@@ -135,7 +136,7 @@ class TestGeoIP2Middleware:
             assert "x-geoip2-country-code" not in response
 
     def test_cache_set(self):
-        caches["geoip2-extras"].clear()
+        caches[settings.CACHE_NAME].clear()
         middleware = GeoIP2Middleware(lambda r: HttpResponse())
         assert middleware.cache_get("1.2.3.4") is None
         middleware.cache_set("1.2.3.4", {})
