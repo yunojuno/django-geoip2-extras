@@ -1,6 +1,7 @@
 from unittest import mock
 
 import pytest
+from django.conf import settings
 from django.contrib.gis.geoip2 import GeoIP2Exception
 from django.core.cache import caches
 from django.http import HttpResponse
@@ -114,7 +115,7 @@ class TestGeoIP2Middleware:
         middleware = GeoIP2Middleware(lambda r: HttpResponse())
         mock_get.return_value = None
         mock_city_or_country.side_effect = GeoIP2Exception()
-        assert middleware.geo_data("1.2.3.4") == None
+        assert middleware.geo_data("1.2.3.4") is None
 
     @pytest.mark.parametrize("add_headers", [True, False])
     @mock.patch.object(GeoIP2Middleware, "geo_data")
@@ -135,7 +136,7 @@ class TestGeoIP2Middleware:
             assert "x-geoip2-country-code" not in response
 
     def test_cache_set(self):
-        caches["geoip2-extras"].clear()
+        caches[settings.CACHE_NAME].clear()
         middleware = GeoIP2Middleware(lambda r: HttpResponse())
         assert middleware.cache_get("1.2.3.4") is None
         middleware.cache_set("1.2.3.4", {})

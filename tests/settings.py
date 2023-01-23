@@ -34,5 +34,7 @@ GEOIP_PATH = PROJECT_DIR
 # https://github.com/maxmind/MaxMind-DB/tree/main/test-data
 GEOIP_COUNTRY = "GeoLite2-Country-Test.mmdb"
 
+GEOIP2_EXTRAS_CACHE_NAME = "geoip2-extras"
+
 if not DEBUG:
     raise Exception("This settings file can only be used with DEBUG=True")

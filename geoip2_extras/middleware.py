@@ -9,7 +9,7 @@ from django.core.exceptions import MiddlewareNotUsed
 from django.http import HttpRequest, HttpResponse
 from geoip2.errors import AddressNotFoundError
 
-from .settings import ADD_RESPONSE_HEADERS, CACHE_TIMEOUT
+from .settings import ADD_RESPONSE_HEADERS, CACHE_NAME, CACHE_TIMEOUT
 
 logger = logging.getLogger(__name__)
 
@@ -78,8 +78,8 @@ class GeoIP2Middleware:
     def __init_cache__(self) -> None:
         """Initialise cache, raise MiddlewareNotUsed on error."""
         try:
-            self.cache = caches["geoip2-extras"]
-            logging.info("GeoIP2 - successfully initialised local cache")
+            self.cache = caches[CACHE_NAME]
+            logging.info("GeoIP2 - successfully initialised cache")
         except InvalidCacheBackendError as ex:
             raise MiddlewareNotUsed(f"GeoIP2 - cache configuration error: {ex}") from ex
 

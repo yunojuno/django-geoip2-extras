@@ -2,7 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
-## v3.0 [unreleased]
+## v4.0 [Breaking Changes]
+
+The library now asks for which Django cache configuraiton to use rather
+than requiring it's own entry in Django's CACHES setting. This means you
+can take advantage of an existing cache and any features you have set up
+with it such as connection pooling.
+
+If you wish to continue as you were before without modifying your Django
+Cache configuration, then set the new setting to:
+
+```
+GEOIP2_EXTRAS_CACHE_NAME = "geoip2-extras"
+```
+
+As you would already have the `geoip2-extras` cache configuration set up
+from previously using this library.
+
+## v3.0 [Breaking Changes]
 
 * Add support for Python 3.11
 * Drop support for Python 3.7
