@@ -1,13 +1,13 @@
 from unittest import mock
 
 import pytest
-from django.conf import settings
 from django.contrib.gis.geoip2 import GeoIP2Exception
 from django.core.cache import caches
 from django.http import HttpResponse
 from django.test import RequestFactory
 from geoip2.errors import AddressNotFoundError
 
+from geoip2_extras import settings
 from geoip2_extras.middleware import (
     UNKNOWN_COUNTRY,
     GeoIP2Middleware,
