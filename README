@@ -15,9 +15,9 @@ The current version of the this app support **Python 3.8+** and **Django 3.2+**
 1) This package wraps the existing Django functionality, and as a result
 relies on the same underlying requirements:
 
-    In order to perform IP-based geolocation, the GeoIP2 object
-    requires the geoip2 Python library and the GeoIP Country and/or City
-    datasets in binary format (the CSV files will not work!). Grab the
+    In order to perform IP-based geolocation, the GeoIP2 object requires
+    the geoip2 Python library and the GeoIP Country and/or City datasets
+    in binary format (the CSV files will not work!). Grab the
     GeoLite2-Country.mmdb.gz and GeoLite2-City.mmdb.gz files and unzip
     them in a directory corresponding to the GEOIP_PATH setting.
 

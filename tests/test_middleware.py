@@ -1,3 +1,4 @@
+from typing import Optional
 from unittest import mock
 
 import pytest
@@ -49,7 +50,9 @@ def test_annotate_response() -> None:
     "key,val,in_response",
     [("foo", None, False), ("foo", "", False), ("foo", "bar", True)],
 )
-def test_annotate_response__empty(key, val, in_response) -> None:
+def test_annotate_response__empty(
+    key: str, val: Optional[str], in_response: bool
+) -> None:
     """Test that empty fields are not added to response headers."""
     response = HttpResponse()
     annotate_response(response, {key: val})
@@ -59,7 +62,7 @@ def test_annotate_response__empty(key, val, in_response) -> None:
 @pytest.mark.parametrize(
     "forwarded_ip,client_ip,result",
     [
-        (None, None, "0.0.0.0"),
+        (None, None, "0.0.0.0"),  # noqa: S104
         ("1.2.3.4", None, "1.2.3.4"),
         ("1.2.3.4", "", "1.2.3.4"),
         ("1.2.3.4", "8.8.8.8", "1.2.3.4"),
@@ -70,7 +73,12 @@ def test_annotate_response__empty(key, val, in_response) -> None:
         ("1.2.3.4, 8.8.8.8 ", "5.6.7.8", "8.8.8.8"),
     ],
 )
-def test_remote_addr(rf: RequestFactory, forwarded_ip, client_ip, result) -> None:
+def test_remote_addr(
+    rf: RequestFactory,
+    forwarded_ip: Optional[str],
+    client_ip: Optional[str],
+    result: str,
+) -> None:
     request = rf.get("/")
     request.META["REMOTE_ADDR"] = client_ip
     request.META["HTTP_X_FORWARDED_FOR"] = forwarded_ip
@@ -81,7 +89,12 @@ class TestGeoIP2Middleware:
     @mock.patch.object(GeoIP2Middleware, "city_or_country")
     @mock.patch.object(GeoIP2Middleware, "cache_get")
     @mock.patch.object(GeoIP2Middleware, "cache_set")
-    def test_geo_data__cached(self, mock_set, mock_get, mock_city_or_country) -> None:
+    def test_geo_data__cached(
+        self,
+        mock_set: mock.MagicMock,
+        mock_get: mock.MagicMock,
+        mock_city_or_country: mock.MagicMock,
+    ) -> None:
         middleware = GeoIP2Middleware(lambda r: HttpResponse())
         mock_get.return_value = TEST_CITY_DATA.copy()
         result = middleware.geo_data("1.2.3.4")
@@ -92,7 +105,12 @@ class TestGeoIP2Middleware:
     @mock.patch.object(GeoIP2Middleware, "city_or_country")
     @mock.patch.object(GeoIP2Middleware, "cache_get")
     @mock.patch.object(GeoIP2Middleware, "cache_set")
-    def test_geo_data__uncached(self, mock_set, mock_get, mock_city_or_country) -> None:
+    def test_geo_data__uncached(
+        self,
+        mock_set: mock.MagicMock,
+        mock_get: mock.MagicMock,
+        mock_city_or_country: mock.MagicMock,
+    ) -> None:
         middleware = GeoIP2Middleware(lambda r: HttpResponse())
         mock_get.return_value = None
         mock_city_or_country.return_value = TEST_CITY_DATA.copy()
@@ -103,7 +121,9 @@ class TestGeoIP2Middleware:
 
     @mock.patch.object(GeoIP2Middleware, "city_or_country")
     @mock.patch.object(GeoIP2Middleware, "cache_get")
-    def test_geo_data__address_not_found(self, mock_get, mock_city_or_country) -> None:
+    def test_geo_data__address_not_found(
+        self, mock_get: mock.MagicMock, mock_city_or_country: mock.MagicMock
+    ) -> None:
         middleware = GeoIP2Middleware(lambda r: HttpResponse())
         mock_get.return_value = None
         mock_city_or_country.side_effect = AddressNotFoundError()
@@ -111,7 +131,9 @@ class TestGeoIP2Middleware:
 
     @mock.patch.object(GeoIP2Middleware, "city_or_country")
     @mock.patch.object(GeoIP2Middleware, "cache_get")
-    def test_geo_data__geoip2_exception(self, mock_get, mock_city_or_country) -> None:
+    def test_geo_data__geoip2_exception(
+        self, mock_get: mock.MagicMock, mock_city_or_country: mock.MagicMock
+    ) -> None:
         middleware = GeoIP2Middleware(lambda r: HttpResponse())
         mock_get.return_value = None
         mock_city_or_country.side_effect = GeoIP2Exception()
@@ -120,7 +142,13 @@ class TestGeoIP2Middleware:
     @pytest.mark.parametrize("add_headers", [True, False])
     @mock.patch.object(GeoIP2Middleware, "geo_data")
     @mock.patch.object(GeoIP2Middleware, "add_response_headers")
-    def test__call__(self, mock_headers, mock_geo_data, add_headers, rf):
+    def test__call__(
+        self,
+        mock_headers: mock.MagicMock,
+        mock_geo_data: mock.MagicMock,
+        add_headers: bool,
+        rf: RequestFactory,
+    ) -> None:
         """Test pre-request response header override header."""
         middleware = GeoIP2Middleware(lambda r: HttpResponse())
         mock_geo_data.return_value = TEST_COUNTRY_DATA.copy()
@@ -135,7 +163,7 @@ class TestGeoIP2Middleware:
         else:
             assert "x-geoip2-country-code" not in response
 
-    def test_cache_set(self):
+    def test_cache_set(self) -> None:
         caches[settings.CACHE_NAME].clear()
         middleware = GeoIP2Middleware(lambda r: HttpResponse())
         assert middleware.cache_get("1.2.3.4") is None

@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+### v4.1 - 2023-11-15
+
+- Add Django 5.0 to build matrix
+- Add Python 3.12 to build matrix
+
+No code changes.
+
 ## v4.0 [Breaking Changes]
 
 The library now asks for which Django cache configuraiton to use rather

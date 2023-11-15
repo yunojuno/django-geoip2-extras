@@ -5,6 +5,7 @@ __pycache__/
 .eggs/
 .installed.cfg
 .Python
+.ruff_cache/
 .tox/
 .venv
 *.egg
@@ -17,6 +18,7 @@ dist/
 downloads/
 eggs/
 env/
+GeoLite2-*
 htmlcov/
 lib/
 lib64/
@@ -24,4 +26,3 @@ parts/
 poetry.lock
 sdist/
 var/
-GeoLite2-*

@@ -1,48 +1,46 @@
 [tool.poetry]
 name = "django-geoip2-extras"
-version = "4.0"
+version = "4.1"
 description = "Additional functionality using the GeoIP2 database."
 license = "MIT"
 authors = ["YunoJuno <code@yunojuno.com>"]
 maintainers = ["YunoJuno <code@yunojuno.com>"]
-readme = "README.md"
+readme = "README"
 homepage = "https://github.com/yunojuno/django-geoip2-extras"
 repository = "https://github.com/yunojuno/django-geoip2-extras"
 classifiers = [
     "Environment :: Web Environment",
-    "Framework :: Django :: 2.2",
-    "Framework :: Django :: 3.0",
-    "Framework :: Django :: 3.1",
     "Framework :: Django :: 3.2",
+    "Framework :: Django :: 4.0",
+    "Framework :: Django :: 4.1",
+    "Framework :: Django :: 4.2",
+    "Framework :: Django :: 5.0",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
 ]
 packages = [{ include = "geoip2_extras" }]
 
 [tool.poetry.dependencies]
 python = "^3.8"
-django = "^3.2 || ^4.0"
+django = "^3.2 || ^4.0 || ^5.0"
 geoip2 = "^3.0.0"
 
-[tool.poetry.dev-dependencies]
-black = "*"
+[tool.poetry.group.test.dependencies]
 coverage = "*"
-flake8 = "*"
-flake8-bandit = "*"
-flake8-blind-except = "*"
-flake8-docstrings = "*"
-flake8-logging-format = "*"
-flake8-print = "*"
-isort = "*"
-mypy = "*"
-pre-commit = "*"
 pytest = "*"
 pytest-cov = "*"
 pytest-django = "*"
-pyupgrade = "*"
+
+[tool.poetry.group.dev.dependencies]
+black = "*"
+mypy = "*"
+ruff = "*"
+pre-commit = "*"
 types-geoip2 = "*"
 
 [build-system]
